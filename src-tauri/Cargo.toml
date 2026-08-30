@@ -20,6 +20,9 @@ base64 = "0.22"
 qrcode = "0.14"
 image = "0.25"
 
+[target.'cfg(windows)'.dependencies]
+windows = { version = "0.61", features = ["Win32_Graphics_Gdi", "Win32_UI_WindowsAndMessaging"] }
+
 [build-dependencies]
 tauri-build = { version = "2", features = [] }
 

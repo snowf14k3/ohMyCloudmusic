@@ -2945,6 +2945,7 @@ dependencies = [
  "tauri-plugin-global-shortcut",
  "tauri-plugin-shell",
  "tauri-plugin-single-instance",
+ "windows",
 ]
 
 [[package]]

@@ -9,6 +9,15 @@ use tauri::{Emitter, Manager};
 use tauri_plugin_autostart::MacosLauncher;
 use tauri_plugin_global_shortcut::{Code, GlobalShortcutExt, Modifiers, Shortcut};
 
+#[cfg(windows)]
+use windows::Win32::{
+    Foundation::{POINT, RECT},
+    Graphics::Gdi::{ClientToScreen, CreateRectRgn, SetWindowRgn},
+    UI::WindowsAndMessaging::{
+        GetClientRect, GetWindowRect, SetWindowPos, SWP_NOACTIVATE, SWP_NOZORDER,
+    },
+};
+
 pub const USER_AGENT: &str = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36";
 
 const INJECT_JS: &str = concat!(
@@ -100,6 +109,107 @@ fn on_login_success(app: tauri::AppHandle) {
     }
 }
 
+#[cfg(windows)]
+#[tauri::command]
+fn animate_window_size_anchored_bottom(
+    window: tauri::WebviewWindow,
+    width: f64,
+    height: f64,
+    duration: u64,
+) -> Result<(), String> {
+    let hwnd = window.hwnd().map_err(|error| error.to_string())?;
+    let scale = window.scale_factor().map_err(|error| error.to_string())?;
+    let mut window_rect = RECT::default();
+    let mut client_rect = RECT::default();
+    let mut client_origin = POINT::default();
+
+    unsafe {
+        GetWindowRect(hwnd, &mut window_rect).map_err(|error| error.to_string())?;
+        GetClientRect(hwnd, &mut client_rect).map_err(|error| error.to_string())?;
+        if !ClientToScreen(hwnd, &mut client_origin).as_bool() {
+            return Err("failed to locate animated window client area".to_string());
+        }
+    }
+
+    let source_client_width = client_rect.right - client_rect.left;
+    let source_client_height = client_rect.bottom - client_rect.top;
+    let source_outer_width = window_rect.right - window_rect.left;
+    let source_outer_height = window_rect.bottom - window_rect.top;
+    let frame_width = source_outer_width - source_client_width;
+    let frame_height = source_outer_height - source_client_height;
+    let client_left = client_origin.x - window_rect.left;
+    let client_top = client_origin.y - window_rect.top;
+    let target_client_width = (width * scale).round() as i32;
+    let target_client_height = (height * scale).round() as i32;
+    let target_outer_width = target_client_width + frame_width;
+    let target_outer_height = target_client_height + frame_height;
+    let expanding = target_client_height > source_client_height;
+    let animation_client_height = source_client_height.max(target_client_height);
+    let animation_outer_height = animation_client_height + frame_height;
+    let steps = 10;
+
+    let set_region = |visible_height: i32| -> Result<(), String> {
+        let bottom = client_top + animation_client_height;
+        let region = unsafe {
+            CreateRectRgn(
+                client_left,
+                bottom - visible_height,
+                client_left + target_client_width,
+                bottom,
+            )
+        };
+        if unsafe { SetWindowRgn(hwnd, Some(region), true) } == 0 {
+            return Err("failed to update animated window region".to_string());
+        }
+        Ok(())
+    };
+
+    if expanding {
+        set_region(source_client_height)?;
+    }
+
+    unsafe {
+        SetWindowPos(
+            hwnd,
+            None,
+            window_rect.left,
+            window_rect.bottom - animation_outer_height,
+            target_outer_width,
+            animation_outer_height,
+            SWP_NOACTIVATE | SWP_NOZORDER,
+        )
+        .map_err(|error| error.to_string())?;
+    }
+
+    for step in 1..=steps {
+        let progress = step as f64 / steps as f64;
+        let eased = progress * progress * (3.0 - 2.0 * progress);
+        let visible_height = (source_client_height as f64
+            + (target_client_height - source_client_height) as f64 * eased)
+            .round() as i32;
+        set_region(visible_height)?;
+        std::thread::sleep(std::time::Duration::from_millis(duration / steps));
+    }
+
+    if !expanding {
+        unsafe {
+            SetWindowPos(
+                hwnd,
+                None,
+                window_rect.left,
+                window_rect.bottom - target_outer_height,
+                target_outer_width,
+                target_outer_height,
+                SWP_NOACTIVATE | SWP_NOZORDER,
+            )
+            .map_err(|error| error.to_string())?;
+        }
+    }
+    unsafe { SetWindowRgn(hwnd, None, true) };
+
+    Ok(())
+}
+
 #[tauri::command]
 async fn qr_generate() -> Result<serde_json::Value, String> {
     let info = netease::generate_unikey().await?;
@@ -151,6 +261,7 @@ pub fn run() {
             update_like_status,
             open_login_window,
             on_login_success,
+            animate_window_size_anchored_bottom,
             qr_generate,
             qr_check,
             tray::get_tray_state,
