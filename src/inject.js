@@ -7,8 +7,8 @@
   var css = document.createElement('style');
   css.id = 'omc-styles';
   css.textContent =
-    '.omc-draggable{-webkit-app-region:drag!important}' +
-    '.omc-draggable *{-webkit-app-region:no-drag}' +
+    '.omc-draggable,#page_pc_main_nav,#page_pc_main_nav .draggable,#topArea{-webkit-app-region:drag!important}' +
+    '.omc-draggable a,.omc-draggable button,.omc-draggable input,.omc-draggable textarea,.omc-draggable select,.omc-draggable [role="button"],.omc-draggable [role="link"],.omc-draggable [contenteditable="true"],.omc-draggable [tabindex]:not([tabindex="-1"]),.omc-draggable [title],#page_pc_main_nav a,#page_pc_main_nav button,#page_pc_main_nav input,#page_pc_main_nav textarea,#page_pc_main_nav select,#page_pc_main_nav [role="button"],#page_pc_main_nav [role="link"],#page_pc_main_nav [contenteditable="true"],#page_pc_main_nav [tabindex]:not([tabindex="-1"]),#page_pc_main_nav [title]{-webkit-app-region:no-drag!important}' +
     '#omc-window-controls{position:relative;z-index:20;display:flex;align-self:center;align-items:center;height:28px;margin:0 8px 0 auto;overflow:hidden;flex:0 0 auto;-webkit-app-region:no-drag!important;background:transparent;color:inherit;}' +
     '#omc-window-controls::before{content:"";width:1px;height:14px;margin:0 8px;flex:0 0 auto;background:currentColor;opacity:.2;}' +
     '#omc-window-controls.omc-floating{position:fixed;top:4px;right:4px;height:28px;margin:0;z-index:2147483647;background:rgba(24,24,27,.82);border-radius:5px;}' +
@@ -124,10 +124,20 @@
     // ── Window controls ──
     waitFor('#page_pc_main_nav', function (nav) {
       nav.classList.add('omc-draggable');
+      nav.setAttribute('data-tauri-drag-region', '');
+      Array.prototype.forEach.call(nav.querySelectorAll('.draggable'), function (region) {
+        region.setAttribute('data-tauri-drag-region', '');
+      });
+      var topArea = document.getElementById('topArea');
+      if (topArea) {
+        topArea.classList.add('omc-draggable');
+        topArea.setAttribute('data-tauri-drag-region', '');
+      }
       setupWindowControls(appWin, nav, false, miniPlayer);
-      setupTitlebarDragging(appWin, nav);
+      setupTitlebarDragging(appWin);
     }, function () {
       setupWindowControls(appWin, document.documentElement, true, miniPlayer);
+      setupTitlebarDragging(appWin);
     });
 
     // ── Login interception ──
@@ -456,29 +466,51 @@
     };
   }
 
-  function setupTitlebarDragging(appWin, nav) {
-    if (nav.dataset.omcDraggingReady) return;
-    nav.dataset.omcDraggingReady = 'true';
-    var extraDragHeight = 10;
+  function setupTitlebarDragging(appWin) {
+    var dragHost = document.documentElement;
+    if (dragHost.dataset.omcDraggingReady) return;
+    dragHost.dataset.omcDraggingReady = 'true';
+    var extraDragHeight = 24;
+    var interactiveSelector = [
+      '#omc-window-controls',
+      'a',
+      'button',
+      'input',
+      'textarea',
+      'select',
+      'option',
+      'label',
+      '[role="button"]',
+      '[role="link"]',
+      '[contenteditable="true"]',
+      '[tabindex]:not([tabindex="-1"])',
+      '[title]'
+    ].join(',');
 
-    function isEmptyTitlebarArea(target) {
-      if (!target || target.closest('#omc-window-controls,a,button,input,textarea,select,[role="button"],[contenteditable="true"]')) return false;
-      return target === nav || !(target.textContent || '').trim();
+    function isDraggableTarget(target) {
+      if (!target || target.nodeType !== Node.ELEMENT_NODE) return false;
+      var interactive = target.closest(interactiveSelector);
+      var nav = document.getElementById('page_pc_main_nav');
+      // Some themes mark the navbar container itself as focusable/clickable.
+      // Only descendants that are actual controls should block dragging.
+      return !interactive || interactive === nav;
     }
 
     function isInDragBand(e) {
+      var nav = document.getElementById('page_pc_main_nav');
+      if (!nav) return e.clientY >= 0 && e.clientY <= 56;
       var bounds = nav.getBoundingClientRect();
       return e.clientY >= bounds.top && e.clientY <= bounds.bottom + extraDragHeight;
     }
 
     document.addEventListener('pointerdown', function (e) {
-      if (e.button !== 0 || !isInDragBand(e) || !isEmptyTitlebarArea(e.target)) return;
+      if (e.button !== 0 || !isInDragBand(e) || !isDraggableTarget(e.target)) return;
       e.preventDefault();
       appWin.startDragging();
     }, true);
 
     document.addEventListener('dblclick', function (e) {
-      if (!isInDragBand(e) || !isEmptyTitlebarArea(e.target)) return;
+      if (!isInDragBand(e) || !isDraggableTarget(e.target)) return;
       e.preventDefault();
       appWin.isMaximized().then(function (isMaximized) {
         return isMaximized ? appWin.unmaximize() : appWin.maximize();
