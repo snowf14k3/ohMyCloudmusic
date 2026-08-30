@@ -337,6 +337,36 @@
     } catch (error) {}
   }
 
+  function readInternalVolume(targetWindow) {
+    try {
+      readInternalPlayerState(targetWindow);
+      var require = targetWindow.__OMC__ && targetWindow.__OMC__.webpackRequire;
+      var app = require && require(14).a;
+      var state = app && app.getStore && app.getStore();
+      var volume = Number(state && state.playing && state.playing.playingVolume);
+      return isFinite(volume) ? Math.max(0, Math.min(1, volume)) : null;
+    } catch (error) {
+      return null;
+    }
+  }
+
+  function setInternalVolume(targetWindow, value) {
+    try {
+      readInternalPlayerState(targetWindow);
+      var require = targetWindow.__OMC__ && targetWindow.__OMC__.webpackRequire;
+      var app = require && require(14).a;
+      var dispatch = app && app.getDispatch && app.getDispatch();
+      if (!dispatch) return false;
+      dispatch({
+        type: 'playing/setVolume',
+        payload: { volume: Math.max(0, Math.min(1, Number(value))) }
+      });
+      return true;
+    } catch (error) {
+      return false;
+    }
+  }
+
   function readPlayingQueue(targetWindow) {
     try {
       readInternalPlayerState(targetWindow);
@@ -353,11 +383,17 @@
         }).map(function (item) {
           var track = item.track || item.localTrack || {};
           var artists = track.artists || [];
+          var album = track.album || {};
           return {
             id: String(item.resourceId || item.trackId || track.id || ''),
             title: track.name || item.text || '未知歌曲',
             artist: artists.map(function (artist) { return artist.name; }).filter(Boolean).join(' / '),
-            cover: track.coverUrl || track.album && track.album.picUrl || ''
+            artistId: String(artists[0] && artists[0].id || ''),
+            album: album.name || album.albumName || '',
+            albumId: String(album.id || ''),
+            source: item.text || '',
+            sourceHref: item.href || '',
+            cover: track.coverUrl || album.picUrl || ''
           };
         })
       };
@@ -386,6 +422,32 @@
     } catch (error) {}
   }
 
+  function removeQueueItem(targetWindow, trackId) {
+    try {
+      readInternalPlayerState(targetWindow);
+      var require = targetWindow.__OMC__ && targetWindow.__OMC__.webpackRequire;
+      var app = require && require(14).a;
+      var state = app && app.getStore && app.getStore();
+      var items = state && state.playingList && state.playingList.curPlayingList || [];
+      var wanted = String(trackId);
+      var item = items.find(function (entry) {
+        return String(entry.resourceId || entry.trackId || entry.track && entry.track.id || '') === wanted;
+      });
+      var dispatch = app && app.getDispatch && app.getDispatch();
+      if (!item || !dispatch) return false;
+      dispatch({
+        type: 'playingList/removeItemFromCurPlayingListByIds',
+        payload: {
+          removeIds: [{ id: item.id, resourceId: item.resourceId }],
+          triggerScene: 'playingList'
+        }
+      });
+      return true;
+    } catch (error) {
+      return false;
+    }
+  }
+
   function subscribeInternalProgress(targetWindow, callback) {
     readInternalPlayerState(targetWindow);
     var require = targetWindow.__OMC__ && targetWindow.__OMC__.webpackRequire;
@@ -406,8 +468,11 @@
     readInternalPlayerState: readInternalPlayerState,
     readInternalPlaybackState: readInternalPlaybackState,
     seekInternalPlayback: seekInternalPlayback,
+    readInternalVolume: readInternalVolume,
+    setInternalVolume: setInternalVolume,
     readPlayingQueue: readPlayingQueue,
     playQueueItem: playQueueItem,
+    removeQueueItem: removeQueueItem,
     subscribeInternalProgress: subscribeInternalProgress
   };
 })();

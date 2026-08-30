@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <style>
+    *{box-sizing:border-box}
+    html,body{margin:0;width:100%;height:100%;overflow:hidden;background:transparent}
+    #bubble{position:relative;width:124px;height:38px;margin:4px;padding:0 14px;display:flex;align-items:center;border:1px solid rgba(0,0,0,.2);border-radius:11px;background:rgba(246,246,246,.98);box-shadow:0 3px 10px rgba(0,0,0,.25)}
+    #bubble::before{content:"";position:absolute;left:58px;bottom:-6px;width:10px;height:10px;border-right:1px solid rgba(0,0,0,.2);border-bottom:1px solid rgba(0,0,0,.2);background:#f6f6f6;transform:rotate(45deg)}
+    input{position:relative;z-index:1;width:96px;height:18px;margin:0;appearance:none;background:transparent;cursor:pointer}
+    input::-webkit-slider-runnable-track{height:4px;border-radius:3px;background:linear-gradient(to right,#a72f28 0 var(--volume),#aeb0b2 var(--volume) 100%)}
+    input::-webkit-slider-thumb{width:10px;height:10px;margin-top:-3px;appearance:none;border:0;border-radius:50%;background:#a72f28}
+  </style>
+</head>
+<body>
+  <div id="bubble"><input id="volume" type="range" min="0" max="1" step="0.01" aria-label="音量"></div>
+  <script>
+    var slider = document.getElementById('volume');
+    function paint(value) {
+      slider.value = value;
+      slider.style.setProperty('--volume', Math.round(value * 100) + '%');
+    }
+    window.renderVolume = paint;
+    slider.addEventListener('input', function () {
+      var value = Number(slider.value);
+      paint(value);
+      window.__TAURI_INTERNALS__.invoke('set_volume_popup_value', { value: value });
+    });
+    window.addEventListener('blur', function () {
+      window.__TAURI_INTERNALS__.invoke('close_volume_popup');
+    });
+  </script>
+</body>
+</html>

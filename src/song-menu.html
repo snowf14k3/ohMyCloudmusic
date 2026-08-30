@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <style>
+    *{box-sizing:border-box}
+    html,body{margin:0;width:100%;height:100%;overflow:hidden;background:transparent;font-family:"Microsoft YaHei UI","Segoe UI",sans-serif}
+    #menu{width:160px;margin:6px;padding:5px;border:1px solid rgba(0,0,0,.16);border-radius:6px;background:rgba(246,246,246,.98);box-shadow:0 3px 10px rgba(0,0,0,.3);color:#202124;font-size:13px}
+    button,.info{width:100%;height:25px;padding:0 8px;display:flex;align-items:center;overflow:hidden;border:0;border-radius:3px;background:transparent;color:inherit;text-align:left;text-overflow:ellipsis;white-space:nowrap;font:inherit}
+    button:hover{background:#dedede}
+    .separator{height:1px;margin:4px 7px;background:#d2d2d2}
+    .info{color:#404247}
+  </style>
+</head>
+<body>
+  <div id="menu" role="menu">
+    <button data-action="play">播放</button>
+    <button data-action="comments">查看评论</button>
+    <div class="separator"></div>
+    <button data-action="like">收藏</button>
+    <button data-action="download">下载</button>
+    <button data-action="share">分享</button>
+    <button class="info" data-action="artist" id="artist"></button>
+    <button class="info" data-action="album" id="album"></button>
+    <div class="info" id="source"></div>
+    <button data-action="copy">复制链接</button>
+    <div class="separator"></div>
+    <button data-action="remove">从列表中删除</button>
+    <button data-action="dislike">减少推荐</button>
+  </div>
+  <script>
+    window.renderSongMenu = function (payload) {
+      document.getElementById('artist').textContent = '歌手：' + (payload.artist || '未知');
+      document.getElementById('album').textContent = '专辑：' + (payload.album || '未知');
+      document.getElementById('source').textContent = '来源：' + (payload.source || '未知');
+    };
+    document.addEventListener('pointerdown', function (event) {
+      var button = event.target.closest('[data-action]');
+      if (!button) return;
+      window.__TAURI_INTERNALS__.invoke('select_song_menu_action', {
+        action: button.getAttribute('data-action')
+      });
+    });
+    window.addEventListener('blur', function () {
+      window.__TAURI_INTERNALS__.invoke('close_song_menu');
+    });
+  </script>
+</body>
+</html>

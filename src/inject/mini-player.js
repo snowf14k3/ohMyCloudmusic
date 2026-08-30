@@ -6,8 +6,11 @@
   var readInternalPlayerState = adapter.readInternalPlayerState;
   var readInternalPlaybackState = adapter.readInternalPlaybackState;
   var seekInternalPlayback = adapter.seekInternalPlayback;
+  var readInternalVolume = adapter.readInternalVolume;
+  var setInternalVolume = adapter.setInternalVolume;
   var readPlayingQueue = adapter.readPlayingQueue;
   var playQueueItem = adapter.playQueueItem;
+  var removeQueueItem = adapter.removeQueueItem;
   var subscribeToInternalProgress = adapter.subscribeInternalProgress;
   function setupMiniPlayer(T, appWin) {
     var MINI_STATE_KEY = 'omc-mini-state';
@@ -210,7 +213,7 @@
         '<header class="omc-mini-toolbar" id="omc-mini-top" data-tauri-drag-region>' +
           '<div id="omc-mini-window-actions"><button class="omc-mini-button" id="omc-mini-hide" title="隐藏" aria-label="隐藏"><svg viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="currentColor" stroke-width="1"><path d="M3.5 3.5l9 9m0-9l-9 9"/></svg></button><button class="omc-mini-button" id="omc-mini-exit" title="恢复主窗口" aria-label="恢复主窗口"><svg viewBox="0 0 16 16" width="11" height="11" fill="none" stroke="currentColor" stroke-width="1"><rect x="3.5" y="3.5" width="9" height="9"/></svg></button></div>' +
           '<div id="omc-mini-heading" data-tauri-drag-region><div id="omc-mini-title">网易云音乐</div><div id="omc-mini-artist">等待播放</div></div>' +
-          '<button class="omc-mini-button" id="omc-mini-more" title="播放队列" aria-label="播放队列">•••</button>' +
+          '<button class="omc-mini-button" id="omc-mini-more" title="歌曲菜单" aria-label="歌曲菜单">•••</button>' +
         '</header>' +
         '<footer class="omc-mini-toolbar" id="omc-mini-bottom">' +
           '<button id="omc-mini-thumb-toggle" title="切换 Mini 布局" aria-label="切换 Mini 布局"><img id="omc-mini-thumb" alt="专辑封面缩略图"></button>' +
@@ -220,9 +223,9 @@
             '<button class="omc-mini-button" id="omc-mini-next" title="下一首" aria-label="下一首"><svg viewBox="0 0 20 20" width="15" height="15" fill="currentColor"><path d="M14 4h2v12h-2zM4 4l9 6-9 6z"/></svg></button>' +
           '</div>' +
           '<div id="omc-mini-tools">' +
-            '<button class="omc-mini-button" id="omc-mini-like" title="喜欢" aria-label="喜欢"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M20.8 5.8a5.4 5.4 0 0 0-7.7 0L12 7l-1.1-1.2a5.4 5.4 0 0 0-7.7 7.7L12 22l8.8-8.5a5.4 5.4 0 0 0 0-7.7z"/></svg></button>' +
-            '<button class="omc-mini-button" id="omc-mini-queue" title="播放列表" aria-label="播放列表"><svg viewBox="0 0 20 20" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.3"><path d="M7 5h9M7 10h9M7 15h9M3.5 5h.1M3.5 10h.1M3.5 15h.1" stroke-linecap="round"/></svg></button>' +
-            '<button class="omc-mini-button" id="omc-mini-volume" title="静音" aria-label="静音"><svg viewBox="0 0 20 20" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.3"><path d="M3 8h3l4-3v10l-4-3H3zM13 7.2c1.4 1.5 1.4 4.1 0 5.6M15.2 5c2.6 2.8 2.6 7.2 0 10" stroke-linecap="round" stroke-linejoin="round"/></svg></button>' +
+             '<button class="omc-mini-button" id="omc-mini-like" title="喜欢" aria-label="喜欢"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M20.8 5.8a5.4 5.4 0 0 0-7.7 0L12 7l-1.1-1.2a5.4 5.4 0 0 0-7.7 7.7L12 22l8.8-8.5a5.4 5.4 0 0 0 0-7.7z"/></svg></button>' +
+             '<button class="omc-mini-button" id="omc-mini-queue" title="播放列表" aria-label="播放列表"><svg viewBox="0 0 20 20" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.3"><path d="M7 5h9M7 10h9M7 15h9M3.5 5h.1M3.5 10h.1M3.5 15h.1" stroke-linecap="round"/></svg></button>' +
+             '<button class="omc-mini-button" id="omc-mini-volume" title="静音" aria-label="静音"><svg viewBox="0 0 20 20" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.3"><path d="M3 8h3l4-3v10l-4-3H3zM13 7.2c1.4 1.5 1.4 4.1 0 5.6M15.2 5c2.6 2.8 2.6 7.2 0 10" stroke-linecap="round" stroke-linejoin="round"/></svg></button>' +
           '</div>' +
           '<div id="omc-mini-progress"><span id="omc-mini-progress-fill"></span><span id="omc-mini-progress-thumb"></span></div>' +
         '</footer>' +
@@ -247,7 +250,7 @@
       });
       document.getElementById('omc-mini-like').addEventListener('click', function () { performMediaAction('like'); });
       document.getElementById('omc-mini-queue').addEventListener('click', toggleQueue);
-      document.getElementById('omc-mini-more').addEventListener('click', toggleQueue);
+      document.getElementById('omc-mini-more').addEventListener('click', showSongMenu);
       document.getElementById('omc-mini-queue-list').addEventListener('scroll', function () {
         renderVisibleQueue(false);
         updateQueueScrollbar();
@@ -257,7 +260,7 @@
       document.addEventListener('pointermove', dragQueueScrollbar);
       document.addEventListener('pointerup', stopQueueScrollbarDrag);
       document.addEventListener('pointercancel', stopQueueScrollbarDrag);
-      document.getElementById('omc-mini-volume').addEventListener('click', toggleMute);
+      document.getElementById('omc-mini-volume').addEventListener('click', toggleVolumePopup);
       document.getElementById('omc-mini-thumb-toggle').addEventListener('pointerdown', function () {
         suppressMiniHover = true;
         player.classList.add('omc-mini-top-suppressed');
@@ -286,7 +289,9 @@
         if (!event.target.closest('#omc-mini-context')) hideContextMenu();
       });
       document.addEventListener('keydown', function (event) {
-        if (event.key === 'Escape') hideContextMenu();
+        if (event.key === 'Escape') {
+          hideContextMenu();
+        }
       });
       updateMetadata(lastMetadata);
       updatePlayback(lastPlaying);
@@ -360,6 +365,153 @@
       if (menu) menu.classList.remove('open');
     }
 
+    function getCurrentSong() {
+      var queue = readPlayingQueue(window);
+      var current = queue.items.find(function (item) { return item.id === queue.currentId; });
+      return {
+        id: queue.currentId,
+        title: current && current.title || lastMetadata && lastMetadata.title || '',
+        artist: current && current.artist || lastMetadata && lastMetadata.artist || '',
+        artistId: current && current.artistId || '',
+        album: current && current.album || lastMetadata && lastMetadata.album || '',
+        albumId: current && current.albumId || '',
+        source: current && current.source || '',
+        sourceHref: current && current.sourceHref || ''
+      };
+    }
+
+    function showSongMenu(event) {
+      event.preventDefault();
+      event.stopPropagation();
+      hideContextMenu();
+      var song = getCurrentSong();
+      var buttonRect = event.currentTarget.getBoundingClientRect();
+      T.core.invoke('open_song_menu', {
+        x: buttonRect.right - 10,
+        y: buttonRect.top,
+        artist: song.artist || '未知',
+        album: song.album || '未知',
+        source: song.source || '未知'
+      }).then(function () {
+        var attempts = 0;
+        var timer = setInterval(function () {
+          attempts += 1;
+          T.core.invoke('take_song_menu_action').then(function (action) {
+            if (action === null && attempts < 600) return;
+            clearInterval(timer);
+            if (action) handleSongMenuAction(action);
+          }).catch(function () { clearInterval(timer); });
+        }, 50);
+      }).catch(function (error) {
+        console.error('[omc] failed to open song menu', error);
+      });
+    }
+
+    function handleSongMenuAction(action) {
+      var song = getCurrentSong();
+      var songUrl = song.id ? 'https://music.163.com/song?id=' + encodeURIComponent(song.id) : '';
+      if (action === 'play') {
+        performMediaAction('play');
+      } else if (action === 'like') {
+        clickFullPlayerControl('[aria-label="collect"][title="收藏到歌单"],[aria-label="collect"]');
+      } else if (action === 'comments') {
+        clickFullPlayerControl('[aria-label="comment_number"][title="查看评论"],[aria-label="comment_number"]');
+      } else if (action === 'download' && song.id) {
+        var link = document.createElement('a');
+        link.href = 'https://music.163.com/song/media/outer/url?id=' + encodeURIComponent(song.id) + '.mp3';
+        link.download = song.title || 'music';
+        link.click();
+      } else if (action === 'share' && songUrl) {
+        clickFullPlayerControl('[aria-label="share"],button[title="分享"]');
+      } else if (action === 'copy' && songUrl) {
+        navigator.clipboard.writeText(songUrl).catch(function () {});
+      } else if (action === 'artist' && song.artistId) {
+        openFullPlayerResource('artist', song.artistId, song.artist.split(' / ')[0]);
+      } else if (action === 'album' && song.albumId) {
+        openFullPlayerResource('album', song.albumId, song.album);
+      } else if (action === 'remove') {
+        if (removeQueueItem(window, song.id)) {
+          setTimeout(function () { renderQueue(true); }, 100);
+        }
+      } else if (action === 'dislike') {
+        performMediaAction('dislike');
+      }
+    }
+
+    function clickFullPlayerControl(selector) {
+      exit().then(function () {
+        var attempts = 0;
+        var timer = setInterval(function () {
+          attempts += 1;
+          var scopes = [document];
+          var frame = document.querySelector('#g_iframe,iframe[name="contentFrame"]');
+          try {
+            if (frame && frame.contentDocument) scopes.push(frame.contentDocument);
+          } catch (error) {}
+          var commentButton = null;
+          for (var i = 0; i < scopes.length; i++) {
+            var controls = scopes[i].querySelectorAll(selector);
+            for (var controlIndex = controls.length - 1; controlIndex >= 0; controlIndex--) {
+              var candidate = controls[controlIndex].closest('button') || controls[controlIndex];
+              if (candidate.getAttribute('aria-disabled') !== 'true' && candidate.getClientRects().length) {
+                commentButton = candidate;
+                break;
+              }
+            }
+            if (commentButton) break;
+          }
+          if (commentButton) {
+            clearInterval(timer);
+            commentButton.scrollIntoView({ block: 'nearest' });
+            commentButton.focus();
+            commentButton.click();
+          } else if (attempts >= 50) {
+            clearInterval(timer);
+          }
+        }, 100);
+      }).catch(function (error) {
+        console.error('[omc] failed to activate full player control', error);
+      });
+    }
+
+    function openFullPlayerResource(type, id, name) {
+      exit().then(function () {
+        var frame = document.querySelector('#g_iframe,iframe[name="contentFrame"]');
+        var scopes = [document];
+        try {
+          if (frame && frame.contentDocument) scopes.push(frame.contentDocument);
+        } catch (error) {}
+        var attempts = 0;
+        var timer = setInterval(function () {
+          attempts += 1;
+          var link = null;
+          for (var i = 0; i < scopes.length && !link; i++) {
+            var candidates = type === 'artist'
+              ? scopes[i].querySelectorAll('a')
+              : scopes[i].querySelectorAll('.info.album .link,[class*="album"] [class*="link"],a');
+            for (var candidateIndex = 0; candidateIndex < candidates.length; candidateIndex++) {
+              var candidate = candidates[candidateIndex];
+              var href = candidate.getAttribute('href') || '';
+              var text = candidate.textContent.trim();
+              if (text === name || href.indexOf('/' + type + '?id=' + id) !== -1) {
+                link = candidate;
+                break;
+              }
+            }
+          }
+          if (link) {
+            clearInterval(timer);
+            link.scrollIntoView({ block: 'nearest' });
+            link.click();
+          } else if (attempts >= 50) {
+            clearInterval(timer);
+          }
+        }, 100);
+      }).catch(function (error) {
+        console.error('[omc] failed to open full player resource', error);
+      });
+    }
+
     function toggleAlwaysOnTop() {
       var next = !alwaysOnTop;
       appWin.setAlwaysOnTop(next).then(function () {
@@ -394,6 +546,36 @@
       if (!audio) return;
       audio.muted = !audio.muted;
       document.getElementById('omc-mini-volume').classList.toggle('muted', audio.muted);
+    }
+
+    function toggleVolumePopup(event) {
+      var audio = getAudio();
+      var internalVolume = readInternalVolume(window);
+      var currentVolume = internalVolume == null
+        ? (audio ? (audio.muted ? 0 : audio.volume) : 0.8)
+        : internalVolume;
+      var rect = event.currentTarget.getBoundingClientRect();
+      T.core.invoke('open_volume_popup', {
+        x: rect.left + rect.width / 2 - 66,
+        y: rect.top - 50,
+        value: currentVolume
+      }).then(function () {
+        var timer = setInterval(function () {
+          T.core.invoke('take_volume_popup_state').then(function (state) {
+            if (state.value !== null) {
+              setInternalVolume(window, state.value);
+              if (audio) {
+                audio.muted = false;
+                audio.volume = state.value;
+              }
+              document.getElementById('omc-mini-volume').classList.toggle('muted', state.value === 0);
+            }
+            if (!state.open) clearInterval(timer);
+          }).catch(function () { clearInterval(timer); });
+        }, 30);
+      }).catch(function (error) {
+        console.error('[omc] failed to open volume popup', error);
+      });
     }
 
     function toggleCompact() {
@@ -637,9 +819,8 @@
         row.classList.toggle('odd', index % 2 === 0);
         row.classList.toggle('active', item.id === queueSnapshot.currentId);
         row.style.top = (index * QUEUE_ROW_HEIGHT) + 'px';
-        row.innerHTML = '<span class="omc-mini-queue-title"></span><span class="omc-mini-queue-artist"></span>';
+        row.innerHTML = '<span class="omc-mini-queue-title"></span>';
         row.querySelector('.omc-mini-queue-title').textContent = item.title;
-        row.querySelector('.omc-mini-queue-artist').textContent = item.artist;
         row.setAttribute('data-track-id', item.id);
         row.addEventListener('click', function (event) {
           playQueueItem(window, event.currentTarget.getAttribute('data-track-id'));
@@ -825,10 +1006,10 @@
     }
 
     function exit() {
-      if (mode === 'normal' || transitioning) return;
+      if (mode === 'normal' || transitioning) return Promise.resolve();
       transitioning = true;
       var state = restoreState;
-      appWin.hide()
+      return appWin.hide()
         .then(function () {
           document.documentElement.classList.remove('omc-mini-active');
           document.getElementById('omc-mini-player').classList.remove('omc-mini-compact', 'omc-mini-lyrics', 'omc-mini-queue-open');
