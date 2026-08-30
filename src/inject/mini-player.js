@@ -10,6 +10,7 @@
   var playQueueItem = adapter.playQueueItem;
   var subscribeToInternalProgress = adapter.subscribeInternalProgress;
   function setupMiniPlayer(T, appWin) {
+    var MINI_STATE_KEY = 'omc-mini-state';
     var mode = 'normal';
     var transitioning = false;
     var restoreState = null;
@@ -31,6 +32,52 @@
     var lyricTrackId = null;
     var lyricLines = [];
     var activeLyricIndex = -1;
+    var saveStateTimer = null;
+
+    function readSavedMiniState() {
+      try {
+        return JSON.parse(localStorage.getItem(MINI_STATE_KEY)) || null;
+      } catch (error) {
+        return null;
+      }
+    }
+
+    function writeSavedMiniState(state) {
+      try {
+        localStorage.setItem(MINI_STATE_KEY, JSON.stringify(state));
+      } catch (error) {}
+    }
+
+    function persistMiniState() {
+      if (mode === 'normal' || transitioning) return Promise.resolve();
+      return Promise.all([appWin.scaleFactor(), appWin.innerSize(), appWin.innerPosition()]).then(function (values) {
+        var scale = values[0];
+        writeSavedMiniState({
+          active: true,
+          compact: compactMode,
+          queue: queueMode,
+          lyrics: lyricMode,
+          preQueueHeight: preQueueHeight,
+          alwaysOnTop: alwaysOnTop,
+          width: Math.round(values[1].width / scale),
+          height: Math.round(values[1].height / scale),
+          x: Math.round(values[2].x / scale),
+          y: Math.round(values[2].y / scale)
+        });
+      }).catch(function () {});
+    }
+
+    function scheduleMiniStateSave() {
+      if (mode === 'normal' || transitioning) return;
+      clearTimeout(saveStateTimer);
+      saveStateTimer = setTimeout(persistMiniState, 250);
+    }
+
+    function markMiniInactive() {
+      var state = readSavedMiniState() || {};
+      state.active = false;
+      writeSavedMiniState(state);
+    }
 
     function finishTransition(errorMessage, error) {
       if (error) console.error(errorMessage, error);
@@ -38,7 +85,10 @@
         return appWin.setFocus();
       }).catch(function (showError) {
         console.error('[omc] failed to reveal window after Mini transition', showError);
-      }).then(function () { transitioning = false; });
+      }).then(function () {
+        transitioning = false;
+        return persistMiniState();
+      });
     }
 
     function mount() {
@@ -187,6 +237,7 @@
         alwaysOnTop = next;
         document.getElementById('omc-mini-context-topmost').setAttribute('aria-checked', String(next));
         hideContextMenu();
+        scheduleMiniStateSave();
       }).catch(function (error) {
         console.error('[omc] failed to change always-on-top state', error);
       });
@@ -206,6 +257,7 @@
       var player = document.getElementById('omc-mini-player');
       if (player) player.classList.toggle('omc-mini-lyrics', lyricMode);
       if (lyricMode) loadLyrics();
+      scheduleMiniStateSave();
     }
 
     function toggleMute() {
@@ -278,6 +330,7 @@
             updateQueueScrollbar();
           });
         }
+        persistMiniState();
       }, function (error) {
         console.error('[omc] failed to switch queue layout', error);
         player.classList.toggle('omc-mini-queue-open', queueMode);
@@ -513,6 +566,7 @@
           queueMode = false;
           alwaysOnTop = false;
           mode = 'normal';
+          markMiniInactive();
           return appWin.setAlwaysOnTop(false);
         })
         .then(function () { return appWin.setMinSize(new T.window.LogicalSize(800, 600)); })
@@ -559,12 +613,84 @@
       syncedTimelineAt = Date.now();
     }
 
+    function waitForMount() {
+      return new Promise(function (resolve) {
+        var attempts = 0;
+        var timer = setInterval(function () {
+          attempts += 1;
+          if (document.getElementById('omc-mini-player') || attempts >= 100) {
+            clearInterval(timer);
+            resolve(!!document.getElementById('omc-mini-player'));
+          }
+        }, 50);
+      });
+    }
+
+    function restoreSavedState() {
+      var saved = readSavedMiniState();
+      if (!saved || !saved.active) return Promise.resolve(false);
+      transitioning = true;
+      return waitForMount().then(function (mounted) {
+        if (!mounted) throw new Error('Mini player did not mount');
+        return Promise.all([appWin.scaleFactor(), appWin.innerSize(), appWin.innerPosition(), appWin.isMaximized()]);
+      }).then(function (state) {
+        restoreState = {
+          width: Math.round(state[1].width / state[0]),
+          height: Math.round(state[1].height / state[0]),
+          x: Math.round(state[2].x / state[0]),
+          y: Math.round(state[2].y / state[0]),
+          maximized: state[3]
+        };
+        compactMode = !!saved.compact;
+        queueMode = !compactMode && !!saved.queue;
+        lyricMode = !compactMode && !!saved.lyrics;
+        preQueueHeight = Number(saved.preQueueHeight) || 336;
+        alwaysOnTop = saved.alwaysOnTop !== false;
+        var width = Number(saved.width) || (compactMode ? 440 : 336);
+        var height = Number(saved.height) || (compactMode ? 58 : (queueMode ? 497 : 336));
+        var minWidth = compactMode ? 340 : 240;
+        var minHeight = compactMode ? 45 : 240;
+        return appWin.hide()
+          .then(function () { return state[3] ? appWin.unmaximize() : Promise.resolve(); })
+          .then(function () { return appWin.setMinSize(new T.window.LogicalSize(minWidth, minHeight)); })
+          .then(function () { return appWin.setSize(new T.window.LogicalSize(width, height)); })
+          .then(function () {
+            if (!isFinite(saved.x) || !isFinite(saved.y)) return;
+            return appWin.setPosition(new T.window.LogicalPosition(Number(saved.x), Number(saved.y)));
+          })
+          .then(function () { return appWin.setAlwaysOnTop(alwaysOnTop); });
+      }).then(function () {
+        var player = document.getElementById('omc-mini-player');
+        player.classList.toggle('omc-mini-compact', compactMode);
+        player.classList.toggle('omc-mini-queue-open', queueMode);
+        player.classList.toggle('omc-mini-lyrics', lyricMode);
+        document.getElementById('omc-mini-context-topmost').setAttribute('aria-checked', String(alwaysOnTop));
+        mode = 'expanded';
+        document.documentElement.classList.add('omc-mini-active');
+        loadLyrics();
+        if (queueMode) renderQueue(true);
+        return appWin.show().then(function () { return appWin.setFocus(); });
+      }).then(function () {
+        transitioning = false;
+        persistMiniState();
+        return true;
+      }).catch(function (error) {
+        console.error('[omc] failed to restore Mini state', error);
+        transitioning = false;
+        markMiniInactive();
+        return false;
+      });
+    }
+
     if (document.documentElement) mount();
     else document.addEventListener('DOMContentLoaded', mount, { once: true });
     setInterval(updateTimeline, 250);
+    appWin.onMoved(scheduleMiniStateSave);
+    appWin.onResized(scheduleMiniStateSave);
 
     return {
       enter: enter,
+      restoreSavedState: restoreSavedState,
       updateMetadata: updateMetadata,
       updatePlayback: updatePlayback,
       updateTimeline: syncTimeline

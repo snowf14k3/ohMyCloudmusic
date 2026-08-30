@@ -143,9 +143,10 @@
     restoreWindow.catch(function (error) {
       console.error('[omc] failed to restore window state', error);
     }).then(function () {
-      return appWin.show();
-    }).then(function () {
-      return appWin.setFocus();
+      return miniPlayer.restoreSavedState();
+    }).then(function (restoredMini) {
+      if (restoredMini) return;
+      return appWin.show().then(function () { return appWin.setFocus(); });
     }).catch(function (error) {
       console.error('[omc] failed to show main window', error);
     });
