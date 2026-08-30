@@ -31,7 +31,7 @@
     '#omc-mini-lyrics{position:absolute;inset:48px 18px 58px;z-index:2;display:flex;align-items:flex-start;overflow:hidden;opacity:0;pointer-events:none;transition:opacity .25s ease}' +
     '.omc-mini-lyrics #omc-mini-lyrics{opacity:1}' +
     '#omc-mini-lyric-list{width:100%;padding:110px 0;color:rgba(255,255,255,.48);text-align:center;font-size:13px;line-height:30px;transition:transform .34s cubic-bezier(.22,.72,.25,1)}' +
-    '.omc-mini-lyric-line{min-height:30px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;transition:color .2s ease,font-size .2s ease,font-weight .2s ease}' +
+    '.omc-mini-lyric-line{min-height:30px;padding:4px 8px;white-space:normal;overflow-wrap:anywhere;word-break:break-word;line-height:22px;transition:color .2s ease,font-size .2s ease,font-weight .2s ease}' +
     '.omc-mini-lyric-line.active{color:#fff;font-size:15px;font-weight:700;text-shadow:0 1px 9px rgba(255,255,255,.3)}' +
     '.omc-mini-toolbar{position:absolute;left:0;right:0;z-index:5;color:#303238;background:rgba(250,250,249,.965);backdrop-filter:blur(18px);opacity:0;pointer-events:none;transition:opacity .16s ease,transform .18s ease}' +
     '#omc-mini-player.omc-mini-cover-hover .omc-mini-toolbar{opacity:1;transform:translateY(0);pointer-events:auto}' +
@@ -70,7 +70,7 @@
     '#omc-mini-thumb-toggle{position:relative;width:36px;height:36px;padding:0;flex:0 0 auto;overflow:hidden;border:0;border-radius:3px;background:#292b31;color:#fff;cursor:pointer}' +
     '#omc-mini-thumb-toggle::after{content:"◆";position:absolute;inset:0;display:grid;place-items:center;background:rgba(25,27,31,.72);font-size:12px;opacity:0;transition:opacity .12s ease}' +
     '#omc-mini-thumb-toggle:hover::after{opacity:1}' +
-    '.omc-mini-compact #omc-mini-thumb-toggle::after{content:"↕";opacity:1;font-size:17px;font-weight:600}' +
+    '.omc-mini-compact #omc-mini-thumb-toggle::after{content:"↕";opacity:0;font-size:17px;font-weight:600}' +
     '.omc-mini-compact #omc-mini-thumb-toggle:hover::after{background:rgba(25,27,31,.86)}' +
     '#omc-mini-queue-view{position:absolute;left:0;right:0;bottom:0;z-index:4;display:none;top:100vw;height:auto;overflow:hidden;background:#fafafa;color:#27292e;border-top:1px solid rgba(0,0,0,.08);opacity:0;transition:opacity .14s ease}' +
     '.omc-mini-queue-open #omc-mini-art{bottom:auto;height:100vw}' +
