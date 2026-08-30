@@ -1,0 +1,34 @@
+{
+  "identifier": "default",
+  "description": "Capabilities for all windows",
+  "windows": ["main", "login"],
+  "permissions": [
+    "core:default",
+    "core:window:default",
+    "core:window:allow-close",
+    "core:window:allow-minimize",
+    "core:window:allow-maximize",
+    "core:window:allow-unmaximize",
+    "core:window:allow-hide",
+    "core:window:allow-show",
+    "core:window:allow-set-focus",
+    "core:window:allow-is-maximized",
+    "core:window:allow-is-visible",
+    "core:window:allow-inner-size",
+    "core:window:allow-inner-position",
+    "core:window:allow-set-size",
+    "core:window:allow-set-min-size",
+    "core:window:allow-set-position",
+    "core:window:allow-set-always-on-top",
+    "core:window:allow-scale-factor",
+    "core:event:default",
+    "core:event:allow-listen",
+    "core:event:allow-emit",
+    "global-shortcut:default",
+    "autostart:default",
+    "shell:default"
+  ],
+  "remote": {
+    "urls": ["https://music.163.com/*"]
+  }
+}
