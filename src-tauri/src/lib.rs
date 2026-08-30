@@ -11,7 +11,17 @@ use tauri_plugin_global_shortcut::{Code, GlobalShortcutExt, Modifiers, Shortcut}
 
 pub const USER_AGENT: &str = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36";
 
-const INJECT_JS: &str = include_str!("../../src/inject.js");
+const INJECT_JS: &str = concat!(
+    include_str!("../../src/inject/styles.js"),
+    "\n;\n",
+    include_str!("../../src/inject/netease-adapter.js"),
+    "\n;\n",
+    include_str!("../../src/inject/media-controller.js"),
+    "\n;\n",
+    include_str!("../../src/inject/mini-player.js"),
+    "\n;\n",
+    include_str!("../../src/inject/bootstrap.js"),
+);
 
 fn is_netease_login_url(url: &tauri::Url) -> bool {
     if url.host_str() != Some("music.163.com") {
