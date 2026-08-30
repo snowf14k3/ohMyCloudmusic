@@ -12,6 +12,7 @@ pub struct MediaMetadata {
 #[derive(Debug, Clone, Default, Serialize)]
 pub struct MediaState {
     pub playing: bool,
+    pub liked: Option<bool>,
     pub metadata: Option<MediaMetadata>,
 }
 

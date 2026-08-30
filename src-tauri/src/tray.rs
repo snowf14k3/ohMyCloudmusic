@@ -88,6 +88,17 @@ pub fn get_tray_state(app: AppHandle) -> MediaState {
 
 #[tauri::command]
 pub fn tray_action(app: AppHandle, action: String) {
+    if action == "quit" {
+        if let Some(window) = app.get_webview_window("tray-menu") {
+            let _ = window.hide();
+        }
+        let exit_app = app.clone();
+        std::thread::spawn(move || {
+            std::thread::sleep(std::time::Duration::from_millis(100));
+            exit_app.exit(0);
+        });
+        return;
+    }
     handle_action(&app, &action);
     if action == "show" {
         if let Some(window) = app.get_webview_window("tray-menu") {
@@ -107,7 +118,6 @@ fn handle_action(app: &AppHandle, action: &str) {
         "previous" => emit_media(app, "previoustrack"),
         "next" => emit_media(app, "nexttrack"),
         "like" => emit_media(app, "like"),
-        "quit" => app.exit(0),
         _ => {}
     }
 }
@@ -124,6 +134,7 @@ fn toggle_window(app: &AppHandle) {
 }
 
 fn emit_media(app: &AppHandle, action: &str) {
+    eprintln!("[omc:tray] media action={action}");
     if let Some(window) = app.get_webview_window("main") {
         let _ = window.emit("media-control", action);
     }
@@ -195,6 +206,21 @@ fn toggle_tray_menu(app: &AppHandle, cursor: tauri::PhysicalPosition<f64>) {
     let _ = window.emit("tray-state", current_state(app));
     let _ = window.show();
     let _ = window.set_focus();
+
+    let focus_window = window.clone();
+    std::thread::spawn(move || {
+        std::thread::sleep(std::time::Duration::from_millis(300));
+        loop {
+            if !focus_window.is_visible().unwrap_or(false) {
+                break;
+            }
+            if !focus_window.is_focused().unwrap_or(true) {
+                let _ = focus_window.hide();
+                break;
+            }
+            std::thread::sleep(std::time::Duration::from_millis(100));
+        }
+    });
 }
 
 #[cfg(target_os = "linux")]

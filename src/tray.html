@@ -91,6 +91,8 @@
     .transport-button:active { transform: scale(.88); }
     .transport-button.heart:hover { color: #ec4141; background: #fff0ef; }
     .transport-button.heart:active .heart-icon { fill: currentColor; }
+    .transport-button.heart.liked { color: #ec4141; }
+    .transport-button.heart.liked .heart-icon { fill: currentColor; }
     .pause-icon { display: none; }
     .playing .play-icon { display: none; }
     .playing .pause-icon { display: block; }
@@ -144,7 +146,7 @@
       <button class="transport-button" data-action="next" title="下一首" aria-label="下一首">
         <svg viewBox="0 0 24 24" width="19" height="19" fill="currentColor"><path d="M17 5h2v14h-2zm-12 0 10.5 7L5 19z"/></svg>
       </button>
-      <button class="transport-button heart" data-action="like" title="喜欢当前歌曲" aria-label="喜欢当前歌曲">
+      <button class="transport-button heart" id="like-button" data-action="like" title="喜欢当前歌曲" aria-label="喜欢当前歌曲">
         <svg class="heart-icon" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M20.8 5.9a5.4 5.4 0 0 0-7.7 0L12 7l-1.1-1.1a5.4 5.4 0 0 0-7.7 7.7L12 22l8.8-8.4a5.4 5.4 0 0 0 0-7.7z"/></svg>
       </button>
     </section>
@@ -178,6 +180,7 @@
       var title = document.getElementById('track-title');
       var artist = document.getElementById('track-artist');
       var playPause = document.getElementById('play-pause');
+      var likeButton = document.getElementById('like-button');
 
       function render(state) {
         var metadata = state && state.metadata;
@@ -187,6 +190,10 @@
         playPause.classList.toggle('playing', playing);
         playPause.title = playing ? '暂停' : '播放';
         playPause.setAttribute('aria-label', playPause.title);
+        var liked = state && state.liked === true;
+        likeButton.classList.toggle('liked', liked);
+        likeButton.title = liked ? '取消喜欢' : '喜欢当前歌曲';
+        likeButton.setAttribute('aria-label', likeButton.title);
       }
 
       function refresh() {
@@ -194,7 +201,8 @@
       }
 
       document.querySelectorAll('[data-action]').forEach(function (button) {
-        button.addEventListener('click', function () {
+        button.addEventListener('pointerdown', function (event) {
+          event.preventDefault();
           invoke('tray_action', { action: button.dataset.action }).catch(function () {});
         });
       });
@@ -202,6 +210,9 @@
       document.addEventListener('contextmenu', function (event) { event.preventDefault(); });
       document.addEventListener('keydown', function (event) {
         if (event.key === 'Escape') appWindow.hide();
+      });
+      window.addEventListener('blur', function () {
+        appWindow.hide().catch(function () {});
       });
       window.addEventListener('focus', refresh);
       listen('tray-state', function (event) { render(event.payload); });

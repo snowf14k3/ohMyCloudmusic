@@ -59,6 +59,28 @@ fn update_play_status(app: tauri::AppHandle, playing: bool) {
 }
 
 #[tauri::command]
+fn update_like_status(app: tauri::AppHandle, liked: Option<bool>) {
+    let store = app.state::<MediaStore>();
+    let changed = {
+        let mut state = store.0.lock().unwrap();
+        if state.liked == liked {
+            false
+        } else {
+            state.liked = liked;
+            true
+        }
+    };
+    if changed {
+        tray::update_tray(&app);
+    }
+}
+
+#[tauri::command]
+fn report_like_diagnostic(message: String) {
+    eprintln!("[omc:like] {message}");
+}
+
+#[tauri::command]
 fn open_login_window(app: tauri::AppHandle) {
     login::open_login_window(&app);
 }
@@ -121,6 +143,8 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             update_media_metadata,
             update_play_status,
+            update_like_status,
+            report_like_diagnostic,
             open_login_window,
             on_login_success,
             qr_generate,

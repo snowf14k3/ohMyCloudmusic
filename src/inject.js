@@ -406,16 +406,21 @@
         play: '#btn_pc_minibar_play',
         pause: '#btn_pc_minibar_play',
         nexttrack: '[aria-label="next"]',
-        previoustrack: '[aria-label="pre"]',
-        like: '#btn_pc_minibar_like,[id*="minibar_like"],[class*="songPlayInfo"] [aria-label="like"],[class*="songPlayInfo"] [aria-label="unlike"],[class*="songPlayInfo"] [aria-label="favorite"],[class*="songPlayInfo"] [aria-label="unfavorite"],[class*="songPlayInfo"] [aria-label="喜欢"],[class*="songPlayInfo"] [aria-label="取消喜欢"],[class*="songPlayInfo"] [title="喜欢"],[class*="songPlayInfo"] [title="取消喜欢"]'
+        previoustrack: '[aria-label="pre"]'
       };
-      var button = document.querySelector(selectors[action]);
+      var likeState = action === 'like' ? readLoggedLikeControl(document) || readInternalPlayerState(window) : null;
+      var button = action === 'like' ? findLikeButton(document) : document.querySelector(selectors[action]);
       var audio = document.querySelector('audio');
       if (window === window.top) {
         var contentFrame = document.querySelector('#g_iframe,iframe[name="contentFrame"]');
         try {
           if (!button && contentFrame && contentFrame.contentDocument) {
-            button = contentFrame.contentDocument.querySelector(selectors[action]);
+            likeState = action === 'like'
+              ? readLoggedLikeControl(contentFrame.contentDocument) || readInternalPlayerState(contentFrame.contentWindow)
+              : null;
+            button = action === 'like'
+              ? findLikeButton(contentFrame.contentDocument)
+              : contentFrame.contentDocument.querySelector(selectors[action]);
           }
           if (!audio && contentFrame && contentFrame.contentDocument) {
             audio = contentFrame.contentDocument.querySelector('audio');
@@ -424,7 +429,25 @@
       }
       if (button) {
         if (button.tagName !== 'BUTTON') button = button.closest('button') || button;
+        if (action === 'like' && window.__TAURI__) {
+          window.__TAURI__.core.invoke('report_like_diagnostic', {
+            message: 'click before=' + JSON.stringify(likeState) + ' button=' + button.outerHTML.slice(0, 1000)
+          });
+        }
         button.click();
+        if (action === 'like') {
+          window.dispatchEvent(new CustomEvent('omc-like-toggle', {
+            detail: likeState ? { trackId: likeState.trackId, liked: !likeState.liked } : null
+          }));
+          setTimeout(function () {
+            var afterState = readInternalPlayerState(window);
+            if (window.__TAURI__) {
+              window.__TAURI__.core.invoke('report_like_diagnostic', {
+                message: 'click after=' + JSON.stringify(afterState) + ' dom=' + readLikeState(document)
+              });
+            }
+          }, 800);
+        }
         return;
       }
       if (audio && action === 'play') {
@@ -499,8 +522,163 @@
         album: '',
         artwork: getOriginalArtworkUrl(cover && (cover.currentSrc || cover.src))
       } : null,
-      playing: stateLabel === 'pause' || (stateIcon && stateIcon.getAttribute('title') === '暂停')
+      playing: stateLabel === 'pause' || (stateIcon && stateIcon.getAttribute('title') === '暂停'),
+      liked: readLikeState(scope)
     };
+  }
+
+  function findLikeButton(scope) {
+    if (!scope) return null;
+    var likeIcons = scope.querySelectorAll('[class*="songPlayInfo"] .cmd-icon-like,#page_pc_mini_bar .cmd-icon-like');
+    for (var iconIndex = likeIcons.length - 1; iconIndex >= 0; iconIndex--) {
+      var iconButton = likeIcons[iconIndex].closest('button,[role="button"]') || likeIcons[iconIndex];
+      if (iconButton.getClientRects().length) return iconButton;
+    }
+    if (likeIcons.length) {
+      return likeIcons[likeIcons.length - 1].closest('button,[role="button"]') || likeIcons[likeIcons.length - 1];
+    }
+    var loggedControl = readLoggedLikeControl(scope);
+    if (loggedControl && loggedControl.button) return loggedControl.button;
+    var direct = scope.querySelector('#btn_pc_minibar_like,[id*="minibar_like"],[data-testid*="like"]');
+    if (direct) return direct.closest('button,[role="button"]') || direct;
+
+    var player = scope.querySelector('[class*="songPlayInfo"],#page_pc_minibar,[class*="PlayerBar"],[class*="playerBar"]');
+    var candidates = (player || scope).querySelectorAll('button,[role="button"],[aria-label],[title]');
+    for (var i = 0; i < candidates.length; i++) {
+      var candidate = candidates[i];
+      var label = ((candidate.getAttribute('aria-label') || '') + ' ' + (candidate.getAttribute('title') || '')).trim();
+      if (/^(unlike|like|liked|取消喜欢|喜欢|已喜欢|从我喜欢移除)/i.test(label)) {
+        return candidate.closest('button,[role="button"]') || candidate;
+      }
+    }
+    return null;
+  }
+
+  function readLoggedLikeControl(scope) {
+    if (!scope) return null;
+    var player = scope.querySelector('#page_pc_mini_bar,#page_pc_minibar,[id*="page_pc_mini"]');
+    var trackId = null;
+    var button = null;
+    var liked = null;
+    var controls = Array.prototype.slice.call((player || scope).querySelectorAll('[data-log]'));
+    if (player && player.hasAttribute('data-log')) controls.unshift(player);
+    for (var i = 0; i < controls.length; i++) {
+      try {
+        var log = JSON.parse(controls[i].getAttribute('data-log') || '');
+        var params = log && log.params;
+        if (typeof params === 'string') params = JSON.parse(params);
+        var rawTrackId = params && params.s_cid;
+        if (/^[1-9]\d*$/.test(String(rawTrackId || ''))) trackId = String(rawTrackId);
+        if (log && log.oid === 'btn_pc_like') {
+          button = controls[i].closest('button,[role="button"]') || controls[i];
+          liked = params ? String(params.type) === '0' : null;
+        }
+      } catch (error) {}
+    }
+    return button || trackId ? { button: button, liked: liked, trackId: trackId } : null;
+  }
+
+  function readCurrentTrackId(scope) {
+    if (!scope) return null;
+    var info = scope.querySelector('[class*="songPlayInfo"]');
+    var player = scope.querySelector('#page_pc_mini_bar,#page_pc_minibar,[id*="page_pc_mini"]');
+    var root = info || player;
+    if (!root) return null;
+
+    var linked = root.querySelector('a[href*="/song"],a[href*="song?id="]');
+    if (linked) {
+      try {
+        var linkedId = new URL(linked.href, window.location.href).searchParams.get('id');
+        if (/^[1-9]\d*$/.test(linkedId || '')) return linkedId;
+      } catch (error) {}
+    }
+
+    var nodes = [root].concat(Array.prototype.slice.call(root.querySelectorAll('[data-song-id],[data-track-id],[data-id],[data-log]')));
+    for (var i = 0; i < nodes.length; i++) {
+      var directId = nodes[i].getAttribute('data-song-id') || nodes[i].getAttribute('data-track-id') || nodes[i].getAttribute('data-id');
+      if (/^[1-9]\d*$/.test(directId || '')) return directId;
+      try {
+        var log = JSON.parse(nodes[i].getAttribute('data-log') || '');
+        var params = log && log.params;
+        if (typeof params === 'string') params = JSON.parse(params);
+        var loggedId = params && params.s_cid;
+        if (/^[1-9]\d*$/.test(String(loggedId || ''))) return String(loggedId);
+      } catch (error) {}
+    }
+    return null;
+  }
+
+  function readLikeState(scope) {
+    var likeIcon = scope && scope.querySelector('[class*="songPlayInfo"] .cmd-icon-like,#page_pc_mini_bar .cmd-icon-like');
+    if (likeIcon) {
+      var likePath = likeIcon.querySelector('path');
+      var pathFill = likePath && likePath.getAttribute('fill') || '';
+      if (pathFill.indexOf('url(#') === 0) return true;
+      if (likeIcon.className && String(likeIcon.className).indexOf('miniBarIconColorStyle_') !== -1) return false;
+      var iconTitle = likeIcon.getAttribute('title') || '';
+      if (iconTitle.indexOf('取消喜欢') === 0) return true;
+      if (iconTitle.indexOf('喜欢') === 0) return false;
+    }
+    var loggedControl = readLoggedLikeControl(scope);
+    if (loggedControl && typeof loggedControl.liked === 'boolean') return loggedControl.liked;
+    var button = findLikeButton(scope);
+    if (!button) return null;
+
+    var stateNode = button.matches('[aria-pressed],[aria-checked],[data-liked],[data-state]')
+      ? button
+      : button.querySelector('[aria-pressed],[aria-checked],[data-liked],[data-state]') || button;
+    var pressed = stateNode.getAttribute('aria-pressed');
+    if (pressed === 'true' || pressed === 'false') return pressed === 'true';
+    var checked = stateNode.getAttribute('aria-checked');
+    if (checked === 'true' || checked === 'false') return checked === 'true';
+    var dataLiked = stateNode.getAttribute('data-liked');
+    if (dataLiked === 'true' || dataLiked === 'false') return dataLiked === 'true';
+    var dataState = stateNode.getAttribute('data-state');
+    if (/^(on|active|checked|liked|collected)$/i.test(dataState || '')) return true;
+    if (/^(off|inactive|unchecked)$/i.test(dataState || '')) return false;
+
+    var className = typeof button.className === 'string' ? button.className : '';
+    if (button.querySelector('.likenumber-red,.color-red')) return true;
+    if (/(^|[\s_-])(liked|selected|checked|active)([\s_-]|$)/i.test(className)) return true;
+    var labelNode = button.querySelector('[aria-label],[title]');
+    var label = (
+      (button.getAttribute('aria-label') || '') + ' ' +
+      (button.getAttribute('title') || '') + ' ' +
+      (labelNode && labelNode !== button ? (labelNode.getAttribute('aria-label') || '') + ' ' + (labelNode.getAttribute('title') || '') : '')
+    ).trim();
+    if (/unlike|unfavorite|uncollect|取消喜欢|已喜欢|取消收藏|已收藏|从我喜欢移除|liked|favorited|collected/i.test(label)) return true;
+    if (/like|favorite|collect|喜欢|收藏到我喜欢|收藏/i.test(label)) return false;
+    return null;
+  }
+
+  function readInternalPlayerState(targetWindow) {
+    try {
+      if (!targetWindow.__omcWebpackRequire && targetWindow.webpackJsonp) {
+        var moduleId = 900000 + Math.floor(Math.random() * 100000);
+        var modules = {};
+        modules[moduleId] = function (module, exports, require) {
+          targetWindow.__omcWebpackRequire = require;
+        };
+        targetWindow.webpackJsonp.push([[moduleId], modules, [[moduleId]]]);
+      }
+      var require = targetWindow.__omcWebpackRequire;
+      if (!require) return null;
+      var appModule = require(14);
+      var app = appModule && appModule.a;
+      var store = app && app.getStore && app.getStore();
+      var state = store && store.getState();
+      var rawTrackId = state && state.playing && state.playing.onlineResourceId;
+      if (!/^[1-9]\d*$/.test(String(rawTrackId || ''))) return null;
+      var trackId = String(rawTrackId);
+      var hostResource = state['async:hostResource'];
+      var likeMap = hostResource && hostResource.likeTracksMap;
+      return {
+        trackId: trackId,
+        liked: likeMap && typeof likeMap[trackId] === 'boolean' ? likeMap[trackId] : null
+      };
+    } catch (error) {
+      return null;
+    }
   }
 
   function setupTitlebarDragging(appWin) {
@@ -562,7 +740,74 @@
     var invoke = T && T.core.invoke;
     var lastMetadata = '';
     var lastPlaying = null;
+    var lastLiked;
+    var observedLikePlayer = null;
+    var likeObserver = null;
+    var likedTrackIds = null;
+    var likedTracksLoading = false;
+    var likedTracksRetryAt = 0;
+    var lastLikeDiagnostic = '';
+    var reportedLikeDom = false;
     window.__omc_media_handlers = {};
+
+    function reportLikeDiagnostic(message) {
+      if (!invoke || message === lastLikeDiagnostic) return;
+      lastLikeDiagnostic = message;
+      invoke('report_like_diagnostic', { message: message });
+    }
+
+    function loadLikedTracks() {
+      if (likedTracksLoading || Date.now() < likedTracksRetryAt) return;
+      likedTracksLoading = true;
+      fetch('/api/nuser/account/get', { credentials: 'include' })
+        .then(function (response) { return response.json(); })
+        .then(function (account) {
+          var userId = account && ((account.profile && account.profile.userId) || (account.account && account.account.id));
+          if (!userId) throw new Error('not logged in');
+          return fetch('/api/user/playlist?uid=' + encodeURIComponent(userId) + '&offset=0&limit=1000', { credentials: 'include' });
+        })
+        .then(function (response) { return response.json(); })
+        .then(function (result) {
+          var playlists = result && result.playlist || [];
+          var likedPlaylist = playlists.find(function (playlist) { return Number(playlist.specialType) === 5; });
+          if (!likedPlaylist) throw new Error('liked playlist not found');
+          return fetch('/api/v6/playlist/detail?id=' + encodeURIComponent(likedPlaylist.id) + '&n=0&newStyle=true', { credentials: 'include' });
+        })
+        .then(function (response) { return response.json(); })
+        .then(function (result) {
+          likedTrackIds = new Set((result && result.playlist && result.playlist.trackIds || []).map(function (track) {
+            return String(track.id);
+          }));
+          likedTracksLoading = false;
+          reportLikeDiagnostic('liked playlist loaded: ' + likedTrackIds.size + ' tracks');
+          update();
+        }).catch(function (error) {
+          likedTracksLoading = false;
+          likedTracksRetryAt = Date.now() + 30000;
+          reportLikeDiagnostic('liked playlist failed: ' + (error && error.message || error));
+        });
+    }
+
+    window.addEventListener('omc-like-toggle', function (event) {
+      var detail = event.detail;
+      if (!detail || !detail.trackId || !likedTrackIds) return;
+      if (detail.liked) likedTrackIds.add(String(detail.trackId));
+      else likedTrackIds.delete(String(detail.trackId));
+      update();
+    });
+
+    function observeLikePlayer(player) {
+      if (!player || player === observedLikePlayer) return;
+      if (likeObserver) likeObserver.disconnect();
+      observedLikePlayer = player;
+      likeObserver = new MutationObserver(update);
+      likeObserver.observe(player, {
+        subtree: true,
+        childList: true,
+        attributes: true,
+        attributeFilter: ['data-log']
+      });
+    }
 
     function update() {
       try {
@@ -585,7 +830,32 @@
         }
         var meta = mediaSession && mediaSession.metadata;
         var domState = readDomMediaState(mediaDocument) || readDomMediaState(document);
-        if (!meta && !audio && !domState) return;
+        var loggedState = readLoggedLikeControl(mediaDocument);
+        if (!loggedState && mediaDocument !== document) loggedState = readLoggedLikeControl(document);
+        var internalState = readInternalPlayerState(window);
+        if (!internalState && window !== window.top) internalState = readInternalPlayerState(window.top);
+        var trackId = internalState && internalState.trackId || loggedState && loggedState.trackId || readCurrentTrackId(mediaDocument);
+        if (!trackId && mediaDocument !== document) trackId = readCurrentTrackId(document);
+        if (!trackId && !reportedLikeDom && (meta || audio || domState)) {
+          var diagnosticInfo = mediaDocument.querySelector('[class*="songPlayInfo"]') || document.querySelector('[class*="songPlayInfo"]');
+          var diagnosticPlayers = Array.prototype.slice.call(mediaDocument.querySelectorAll('[id*="mini"],[class*="mini"],[id*="play"],[class*="play"]'), 0, 40).map(function (node) {
+            return node.tagName + '#' + node.id + '.' + (typeof node.className === 'string' ? node.className : '');
+          });
+          reportedLikeDom = true;
+          reportLikeDiagnostic('DOM=' + (diagnosticInfo ? diagnosticInfo.outerHTML.slice(0, 12000) : 'missing') + '\nCANDIDATES=' + diagnosticPlayers.join('|'));
+        }
+        var domLiked = internalState && internalState.liked;
+        if (trackId && !likedTrackIds) loadLikedTracks();
+        var liked = likedTrackIds && trackId
+          ? likedTrackIds.has(String(trackId))
+          : (internalState && typeof internalState.liked === 'boolean' ? internalState.liked : readLikeState(mediaDocument));
+        if (liked === null && mediaDocument !== document) liked = readLikeState(document);
+        reportLikeDiagnostic('track=' + trackId + ' dom=' + domLiked + ' cache=' + (likedTrackIds ? likedTrackIds.size : 'none') + ' liked=' + liked);
+        observeLikePlayer(
+          mediaDocument.querySelector('#page_pc_mini_bar,#page_pc_minibar,[id*="page_pc_mini"]') ||
+          document.querySelector('#page_pc_mini_bar,#page_pc_minibar,[id*="page_pc_mini"]')
+        );
+        if (!meta && !audio && !domState && liked === null) return;
 
         var metadata = null;
         if (meta && meta.title) {
@@ -611,6 +881,7 @@
         var metadataKey = metadata ? JSON.stringify(metadata) : '';
         var metadataChanged = !!metadata && metadataKey !== lastMetadata;
         var playingChanged = playing !== lastPlaying;
+        var likedChanged = liked !== lastLiked;
         if (relay && (metadataChanged || playingChanged)) relay(metadata, playing);
         if (invoke && metadataChanged) {
           invoke('update_media_metadata', {
@@ -624,8 +895,12 @@
         if (invoke && playingChanged) {
           invoke('update_play_status', { playing: playing });
         }
+        if (invoke && likedChanged) {
+          invoke('update_like_status', { liked: liked });
+        }
         if (metadata) lastMetadata = metadataKey;
         lastPlaying = playing;
+        lastLiked = liked;
       } catch (e) {}
     }
 
