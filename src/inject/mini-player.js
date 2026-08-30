@@ -43,6 +43,7 @@
     var compactResizeAdjusting = false;
     var pendingCompactSize = null;
     var coverAspectTimer = null;
+    var suppressMiniHover = false;
 
     function readSavedMiniState() {
       try {
@@ -170,6 +171,22 @@
       }, 120);
     }
 
+    function syncMiniLayoutAfterResize() {
+      if (mode === 'normal' || transitioning || !queueMode) return;
+      requestAnimationFrame(function () {
+        if (mode === 'normal' || transitioning || !queueMode) return;
+        var player = document.getElementById('omc-mini-player');
+        var contentHeight = compactMode ? COMPACT_HEIGHT : window.innerWidth;
+        var queueHeight = Math.max(100, window.innerHeight - contentHeight);
+        preQueueHeight = contentHeight;
+        player.style.setProperty('--omc-mini-cover-height', contentHeight + 'px');
+        player.style.setProperty('--omc-mini-queue-height', queueHeight + 'px');
+        player.style.setProperty('--omc-mini-shell-height', window.innerHeight + 'px');
+        renderVisibleQueue(true);
+        updateQueueScrollbar();
+      });
+    }
+
     function finishTransition(errorMessage, error) {
       if (error) console.error(errorMessage, error);
       return appWin.show().then(function () {
@@ -241,6 +258,15 @@
       document.addEventListener('pointerup', stopQueueScrollbarDrag);
       document.addEventListener('pointercancel', stopQueueScrollbarDrag);
       document.getElementById('omc-mini-volume').addEventListener('click', toggleMute);
+      document.getElementById('omc-mini-thumb-toggle').addEventListener('pointerdown', function () {
+        suppressMiniHover = true;
+        player.classList.add('omc-mini-top-suppressed');
+        setTimeout(function () {
+          if (transitioning) return;
+          suppressMiniHover = false;
+          player.classList.remove('omc-mini-top-suppressed');
+        }, 500);
+      });
       document.getElementById('omc-mini-thumb-toggle').addEventListener('click', toggleCompact);
       document.getElementById('omc-mini-art').addEventListener('dblclick', toggleLyrics);
       document.getElementById('omc-mini-art').addEventListener('contextmenu', showContextMenu);
@@ -287,6 +313,9 @@
     }
 
     function updateMiniHover(event) {
+      if (transitioning || suppressMiniHover) {
+        return;
+      }
       var coverHeight = queueMode
         ? (compactMode ? COMPACT_HEIGHT : Math.min(window.innerWidth, window.innerHeight))
         : window.innerHeight;
@@ -370,51 +399,81 @@
     function toggleCompact() {
       if (mode === 'normal' || transitioning) return;
       transitioning = true;
+      document.getElementById('omc-mini-player').classList.add('omc-mini-actions-settling');
+      document.getElementById('omc-mini-player').classList.remove('omc-mini-cover-hover');
       var nextCompactMode = !compactMode;
-      queueMode = false;
       var player = document.getElementById('omc-mini-player');
-      player.classList.remove('omc-mini-queue-open');
-      if (nextCompactMode) player.classList.add('omc-mini-compacting');
-      if (!nextCompactMode) {
-        player.classList.add('omc-mini-expanding');
-        player.classList.remove('omc-mini-compact');
-        requestAnimationFrame(function () {
-          requestAnimationFrame(function () {
-            player.classList.add('omc-mini-expanding-active');
-          });
-        });
-      }
       Promise.all([appWin.scaleFactor(), appWin.innerSize()]).then(function (state) {
         var currentWidth = Math.round(state[1].width / state[0]);
         var currentHeight = Math.round(state[1].height / state[0]);
         var width = currentWidth;
+        var currentContentHeight = compactMode ? COMPACT_HEIGHT : currentWidth;
+        var queueHeight = queueMode ? Math.max(100, currentHeight - currentContentHeight) : 0;
+        if (queueMode) player.style.setProperty('--omc-mini-queue-height', queueHeight + 'px');
         var from = {
           width: currentWidth,
           height: currentHeight
         };
+        var targetContentHeight = nextCompactMode ? COMPACT_HEIGHT : width;
         var target = {
           width: width,
-          height: nextCompactMode ? COMPACT_HEIGHT : width
+          height: targetContentHeight + queueHeight
         };
+        player.style.setProperty('--omc-mini-shell-height', from.height + 'px');
+        if (nextCompactMode) {
+          player.classList.add('omc-mini-compacting');
+        } else {
+          player.classList.add('omc-mini-expanding');
+          player.classList.remove('omc-mini-compact');
+          requestAnimationFrame(function () {
+            requestAnimationFrame(function () {
+              player.classList.add('omc-mini-expanding-active');
+            });
+          });
+        }
         return appWin.setMinSize(new T.window.LogicalSize(240, 45))
           .then(function () { return animateMiniSize(from, target, 160, true); })
           .then(function () {
             compactMode = nextCompactMode;
+            preQueueHeight = targetContentHeight;
+            player.style.setProperty('--omc-mini-shell-height', target.height + 'px');
             player.classList.toggle('omc-mini-compact', compactMode);
             player.classList.remove('omc-mini-compacting', 'omc-mini-expanding', 'omc-mini-expanding-active');
-            if (compactMode) return lockCompactHeight(COMPACT_HEIGHT);
-            return appWin.setMinSize(new T.window.LogicalSize(240, 240));
+            if (compactMode) {
+              return nextPaint().then(function () {
+                return T.core.invoke('finish_window_region_animation', target);
+              }).then(function () {
+                return lockCompactHeight(target.height);
+              });
+            }
+            return appWin.setMinSize(new T.window.LogicalSize(240, queueMode ? width + 100 : 240));
+          })
+          .then(function () {
+            if (queueMode) {
+              renderVisibleQueue(true);
+              updateQueueScrollbar();
+            }
           });
       }).then(function () {
         transitioning = false;
+        suppressMiniHover = false;
+        player.classList.remove('omc-mini-actions-settling', 'omc-mini-top-suppressed');
+        if (queueMode) {
+          renderVisibleQueue(true);
+          updateQueueScrollbar();
+        }
         persistMiniState();
       }, function (error) {
         console.error('[omc] failed to switch Mini layout', error);
-        compactMode = nextCompactMode;
         player.classList.toggle('omc-mini-compact', compactMode);
-        player.classList.remove('omc-mini-compacting', 'omc-mini-expanding', 'omc-mini-expanding-active');
+        player.classList.remove('omc-mini-compacting', 'omc-mini-expanding', 'omc-mini-expanding-active', 'omc-mini-actions-settling', 'omc-mini-top-suppressed');
+        T.core.invoke('finish_window_region_animation', {
+          width: window.innerWidth,
+          height: compactMode ? COMPACT_HEIGHT : window.innerHeight
+        }).catch(function () {});
         transitioning = false;
-        });
+        suppressMiniHover = false;
+      });
     }
 
     function toggleQueue() {
@@ -425,10 +484,10 @@
       queueMode = !queueMode;
       if (queueMode && lyricMode) toggleLyrics();
       var player = document.getElementById('omc-mini-player');
+      player.classList.add('omc-mini-queue-transition');
       if (queueMode) {
         preQueueHeight = wasCompact ? COMPACT_HEIGHT : window.innerWidth;
         player.style.setProperty('--omc-mini-cover-height', preQueueHeight + 'px');
-        player.classList.add('omc-mini-queue-open');
         if (queueSnapshot.items.length) queueLastRefresh = Date.now();
         setTimeout(function () { renderQueue(false); }, 0);
       }
@@ -447,6 +506,8 @@
         var saved = readSavedMiniState();
         var savedQueueHeight = saved && saved.queueHeights && Number(saved.queueHeights[wasCompact ? 'compact' : 'cover']);
         var queueHeight = savedQueueHeight || Math.max(150, Math.round(from.width * 0.48));
+        player.style.setProperty('--omc-mini-queue-height', queueHeight + 'px');
+        if (queueMode) player.classList.add('omc-mini-queue-open');
         var target = {
           width: from.width,
           height: queueMode ? contentHeight + queueHeight : contentHeight
@@ -462,6 +523,7 @@
         });
       }).then(function () {
         if (!queueMode) player.classList.remove('omc-mini-queue-open');
+        player.classList.remove('omc-mini-queue-transition');
         transitioning = false;
         if (queueMode) {
           renderQueue(false);
@@ -476,6 +538,7 @@
       }, function (error) {
         console.error('[omc] failed to switch queue layout', error);
         player.classList.toggle('omc-mini-queue-open', queueMode);
+        player.classList.remove('omc-mini-queue-transition');
         transitioning = false;
       });
     }
@@ -504,6 +567,14 @@
           }).catch(reject);
         }
         frame();
+      });
+    }
+
+    function nextPaint() {
+      return new Promise(function (resolve) {
+        requestAnimationFrame(function () {
+          requestAnimationFrame(resolve);
+        });
       });
     }
 
@@ -831,6 +902,8 @@
     function restoreSavedState() {
       var saved = readSavedMiniState();
       if (!saved || !saved.active) return Promise.resolve(false);
+      var restoredMiniHeight = 0;
+      var restoredQueueHeight = 0;
       transitioning = true;
       return waitForMount().then(function (mounted) {
         if (!mounted) throw new Error('Mini player did not mount');
@@ -850,9 +923,12 @@
         var width = Number(saved.sharedWidth) || Number(saved.width) || (compactMode ? 440 : 336);
         preQueueHeight = compactMode ? COMPACT_HEIGHT : width;
         var savedQueueHeight = Number(saved.queueHeights && saved.queueHeights[compactMode ? 'compact' : 'cover']);
+        var defaultQueueHeight = savedQueueHeight || Math.max(150, Math.round(width * 0.48));
+        restoredQueueHeight = defaultQueueHeight;
         var height = compactMode
-          ? (queueMode ? (Number(saved.height) || 269) : COMPACT_HEIGHT)
-          : (queueMode ? width + (savedQueueHeight || Math.max(150, Math.round(width * 0.48))) : width);
+          ? (queueMode ? COMPACT_HEIGHT + defaultQueueHeight : COMPACT_HEIGHT)
+          : (queueMode ? width + defaultQueueHeight : width);
+        restoredMiniHeight = height;
         var minWidth = 240;
         var minHeight = compactMode ? 45 : (queueMode ? width + 100 : 240);
         return appWin.hide()
@@ -868,7 +944,9 @@
           .then(function () { if (compactMode) return lockCompactHeight(height); });
       }).then(function () {
         var player = document.getElementById('omc-mini-player');
+        player.style.setProperty('--omc-mini-shell-height', restoredMiniHeight + 'px');
         player.style.setProperty('--omc-mini-cover-height', (compactMode ? COMPACT_HEIGHT : preQueueHeight) + 'px');
+        player.style.setProperty('--omc-mini-queue-height', restoredQueueHeight + 'px');
         player.classList.toggle('omc-mini-compact', compactMode);
         player.classList.toggle('omc-mini-queue-open', queueMode);
         player.classList.toggle('omc-mini-lyrics', lyricMode);
@@ -897,6 +975,7 @@
     appWin.onResized(scheduleMiniStateSave);
     appWin.onResized(enforceCompactHeight);
     appWin.onResized(enforceCoverAspect);
+    appWin.onResized(syncMiniLayoutAfterResize);
 
     return {
       enter: enter,
