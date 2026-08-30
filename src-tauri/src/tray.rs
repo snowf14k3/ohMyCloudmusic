@@ -134,7 +134,6 @@ fn toggle_window(app: &AppHandle) {
 }
 
 fn emit_media(app: &AppHandle, action: &str) {
-    eprintln!("[omc:tray] media action={action}");
     if let Some(window) = app.get_webview_window("main") {
         let _ = window.emit("media-control", action);
     }

@@ -76,11 +76,6 @@ fn update_like_status(app: tauri::AppHandle, liked: Option<bool>) {
 }
 
 #[tauri::command]
-fn report_like_diagnostic(message: String) {
-    eprintln!("[omc:like] {message}");
-}
-
-#[tauri::command]
 fn open_login_window(app: tauri::AppHandle) {
     login::open_login_window(&app);
 }
@@ -144,7 +139,6 @@ pub fn run() {
             update_media_metadata,
             update_play_status,
             update_like_status,
-            report_like_diagnostic,
             open_login_window,
             on_login_success,
             qr_generate,

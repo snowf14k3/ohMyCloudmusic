@@ -21,29 +21,56 @@
     '#omc-btn-max .omc-restore-icon{display:none}' +
     '#omc-btn-max[data-maximized="true"] .omc-maximize-icon{display:none}' +
     '#omc-btn-max[data-maximized="true"] .omc-restore-icon{display:block}' +
-    '#omc-mini-player{position:fixed;inset:0;z-index:2147483647;display:none;overflow:hidden;background:#171719;color:#f5f5f5;font-family:"Microsoft YaHei UI","Segoe UI",sans-serif;-webkit-app-region:drag}' +
+    '#omc-mini-player{position:fixed;inset:0;z-index:2147483647;display:none;overflow:hidden;background:#171719;color:#f5f5f5;font-family:"Microsoft YaHei UI","Segoe UI",sans-serif}' +
     '.omc-mini-active #omc-mini-player{display:block}' +
     '.omc-mini-active #omc-window-controls{display:none}' +
-    '#omc-mini-art{position:absolute;inset:0;overflow:hidden;background:linear-gradient(145deg,#29292d,#111)}' +
-    '#omc-mini-art::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,0,0,.08),rgba(0,0,0,.42))}' +
-    '#omc-mini-cover{width:100%;height:100%;display:block;object-fit:cover}' +
-    '.omc-mini-button{appearance:none;width:28px;height:28px;padding:0;display:flex;align-items:center;justify-content:center;border:0;border-radius:50%;background:rgba(10,10,12,.38);color:rgba(255,255,255,.78);cursor:default;backdrop-filter:blur(10px);-webkit-app-region:no-drag;transition:color .12s ease,background-color .12s ease,opacity .12s ease}' +
-    '.omc-mini-button:hover{color:#fff;background:rgba(10,10,12,.58)}' +
-    '.omc-mini-button:active{opacity:.7}' +
-    '#omc-mini-hover-zone{position:absolute;left:0;right:0;bottom:0;z-index:3;height:24px;-webkit-app-region:no-drag}' +
-    '#omc-mini-panel{position:absolute;left:0;right:0;bottom:0;z-index:4;height:104px;padding:11px 14px 10px;display:flex;flex-direction:column;justify-content:center;opacity:0;transform:translateY(100%);pointer-events:none;background:rgba(245,245,247,.96);color:#252529;box-shadow:0 -1px rgba(255,255,255,.12);-webkit-app-region:drag;transition:opacity .18s ease,transform .18s ease}' +
-    '#omc-mini-hover-zone:hover~#omc-mini-panel,#omc-mini-panel:hover{opacity:1;transform:translateY(0);pointer-events:auto}' +
-    '#omc-mini-info{min-width:0;text-align:center}' +
-    '#omc-mini-title{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:14px;font-weight:600;line-height:20px}' +
-    '#omc-mini-artist{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-top:1px;font-size:11px;line-height:17px;color:#85858d}' +
-    '#omc-mini-controls{height:38px;margin-top:5px;display:flex;align-items:center;justify-content:center;gap:9px;opacity:0;transform:translateY(3px);pointer-events:none;-webkit-app-region:no-drag;transition:opacity .16s ease,transform .16s ease}' +
-    '#omc-mini-hover-zone:hover~#omc-mini-panel #omc-mini-controls,#omc-mini-panel:hover #omc-mini-controls{opacity:1;transform:translateY(0);pointer-events:auto}' +
-    '#omc-mini-controls .omc-mini-button{width:30px;height:30px;background:transparent;color:#66666d;backdrop-filter:none}' +
-    '#omc-mini-controls .omc-mini-button:hover{background:transparent;color:#171719}' +
-    '#omc-mini-play{width:34px!important;height:34px!important;border:1px solid #77777e!important;color:#303035!important}' +
+    '#omc-mini-art{position:absolute;inset:0;overflow:hidden;background:linear-gradient(145deg,#29292d,#111);-webkit-app-region:no-drag}' +
+    '#omc-mini-cover{width:100%;height:100%;display:block;object-fit:cover;transition:filter .32s ease,transform .32s ease,opacity .32s ease}' +
+    '.omc-mini-lyrics #omc-mini-cover{filter:blur(18px) brightness(.42);transform:scale(1.16);opacity:.72}' +
+    '#omc-mini-lyrics{position:absolute;inset:48px 18px 58px;z-index:2;display:flex;align-items:center;overflow:hidden;opacity:0;pointer-events:none;transition:opacity .25s ease}' +
+    '.omc-mini-lyrics #omc-mini-lyrics{opacity:1}' +
+    '#omc-mini-lyric-list{width:100%;padding:110px 0;color:rgba(255,255,255,.48);text-align:center;font-size:13px;line-height:30px;transition:transform .34s cubic-bezier(.22,.72,.25,1)}' +
+    '.omc-mini-lyric-line{min-height:30px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;transition:color .2s ease,font-size .2s ease,font-weight .2s ease}' +
+    '.omc-mini-lyric-line.active{color:#fff;font-size:15px;font-weight:600}' +
+    '.omc-mini-toolbar{position:absolute;left:0;right:0;z-index:5;color:#303238;background:rgba(250,250,249,.965);backdrop-filter:blur(18px);opacity:0;pointer-events:none;transition:opacity .16s ease,transform .18s ease}' +
+    '#omc-mini-player:hover .omc-mini-toolbar,#omc-mini-player:focus-within .omc-mini-toolbar{opacity:1;transform:translateY(0);pointer-events:auto}' +
+    '#omc-mini-top{top:0;height:50px;display:grid;grid-template-columns:54px 1fr 42px;align-items:center;transform:translateY(-100%);-webkit-app-region:drag}' +
+    '#omc-mini-window-actions{display:flex;align-items:center;padding-left:6px;-webkit-app-region:no-drag}' +
+    '#omc-mini-heading{min-width:0;text-align:center;line-height:1.25}' +
+    '#omc-mini-title{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px;font-weight:500;color:#303238}' +
+    '#omc-mini-artist{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-top:2px;font-size:11px;color:#898b91}' +
+    '#omc-mini-more{justify-self:center;letter-spacing:2px;color:#92949a;font-size:15px;-webkit-app-region:no-drag}' +
+    '#omc-mini-bottom{bottom:0;height:58px;padding:5px 8px 10px;display:flex;align-items:center;gap:6px;transform:translateY(100%);-webkit-app-region:no-drag}' +
+    '#omc-mini-thumb{width:36px;height:36px;flex:0 0 auto;border-radius:3px;object-fit:cover;background:#ddd}' +
+    '#omc-mini-transport{display:flex;align-items:center;gap:2px}' +
+    '#omc-mini-tools{margin-left:auto;display:flex;align-items:center;gap:1px}' +
+    '.omc-mini-button{appearance:none;width:28px;height:28px;padding:0;display:grid;place-items:center;border:0;border-radius:50%;background:transparent;color:#73767e;cursor:default;-webkit-app-region:no-drag;transition:color .12s ease,background-color .12s ease,transform .1s ease}' +
+    '.omc-mini-button:hover{color:#292b31;background:#ececeb}' +
+    '.omc-mini-button:active{transform:scale(.9)}' +
+    '#omc-mini-play{width:31px;height:31px;background:#df3b3b;color:#fff}' +
+    '#omc-mini-play:hover{background:#d33333;color:#fff}' +
     '#omc-mini-play .omc-pause-icon{display:none}' +
     '#omc-mini-play[data-playing="true"] .omc-play-icon{display:none}' +
-    '#omc-mini-play[data-playing="true"] .omc-pause-icon{display:block}';
+    '#omc-mini-play[data-playing="true"] .omc-pause-icon{display:block}' +
+    '#omc-mini-like.liked{color:#ec4141}' +
+    '#omc-mini-like.liked svg{fill:currentColor}' +
+    '#omc-mini-lyric-toggle.active{color:#df3b3b;background:#fff0ef}' +
+    '#omc-mini-volume.muted{color:#b2b3b7}' +
+    '#omc-mini-progress{position:absolute;left:54px;right:10px;bottom:5px;height:3px;border-radius:2px;background:#c9c9c9;cursor:pointer;-webkit-app-region:no-drag}' +
+    '#omc-mini-progress-fill{display:block;width:0;height:100%;border-radius:inherit;background:#df3b3b}' +
+    '#omc-mini-progress-thumb{position:absolute;top:50%;left:0;width:8px;height:8px;border-radius:50%;background:#df3b3b;transform:translate(-50%,-50%)}' +
+    '.omc-mini-compact #omc-mini-art,.omc-mini-compact #omc-mini-lyrics{display:none}' +
+    '.omc-mini-compact #omc-mini-top{left:0;right:auto;z-index:7;width:26px;height:58px;display:block;opacity:1;transform:none;pointer-events:auto;background:rgba(250,250,249,.98)}' +
+    '.omc-mini-compact #omc-mini-window-actions{height:58px;padding:4px 0;flex-direction:column;justify-content:center}' +
+    '.omc-mini-compact #omc-mini-window-actions .omc-mini-button{width:20px;height:20px}' +
+    '.omc-mini-compact #omc-mini-heading,.omc-mini-compact #omc-mini-more{display:none}' +
+    '.omc-mini-compact #omc-mini-bottom{left:0;height:58px;padding-left:28px;opacity:1;transform:none;pointer-events:auto;-webkit-app-region:drag}' +
+    '#omc-mini-thumb-toggle{position:relative;width:36px;height:36px;padding:0;flex:0 0 auto;overflow:hidden;border:0;border-radius:3px;background:#292b31;color:#fff;cursor:pointer}' +
+    '#omc-mini-thumb-toggle::after{content:"◆";position:absolute;inset:0;display:grid;place-items:center;background:rgba(25,27,31,.72);font-size:12px;opacity:0;transition:opacity .12s ease}' +
+    '#omc-mini-thumb-toggle:hover::after{opacity:1}' +
+    '.omc-mini-compact #omc-mini-thumb-toggle::after{content:"↕";opacity:1;font-size:17px;font-weight:600}' +
+    '.omc-mini-compact #omc-mini-thumb-toggle:hover::after{background:rgba(25,27,31,.86)}' +
+    '@media(hover:none){.omc-mini-toolbar{opacity:1!important;transform:none!important;pointer-events:auto!important}}';
 
   function mountStyles() {
     var root = document.head || document.documentElement;
@@ -275,6 +302,11 @@
     var restoreState = null;
     var lastMetadata = null;
     var lastPlaying = false;
+    var lyricMode = false;
+    var compactMode = false;
+    var lyricTrackId = null;
+    var lyricLines = [];
+    var activeLyricIndex = -1;
 
     function finishTransition(errorMessage, error) {
       if (error) console.error(errorMessage, error);
@@ -294,26 +326,174 @@
       player.setAttribute('aria-label', 'Mini 播放器');
       player.innerHTML =
         '<div id="omc-mini-art"><img id="omc-mini-cover" alt="专辑封面"></div>' +
-        '<div id="omc-mini-hover-zone" aria-hidden="true"></div>' +
-        '<div id="omc-mini-panel"><div id="omc-mini-info"><div id="omc-mini-title">网易云音乐</div><div id="omc-mini-artist">等待播放</div></div><div id="omc-mini-controls">' +
-        '<button class="omc-mini-button" id="omc-mini-exit" title="恢复主窗口" aria-label="恢复主窗口"><svg viewBox="0 0 12 12" width="13" height="13"><path d="M4.5 1.5h-3v3m9-3h-3v3m-6 3v3h3m6-3v3h-3M1.5 4.5l3-3m3 0l3 3m-9 3l3 3m3 0l3-3" fill="none" stroke="currentColor"/></svg></button>' +
-        '<button class="omc-mini-button" id="omc-mini-prev" title="上一首" aria-label="上一首"><svg viewBox="0 0 12 12" width="13" height="13"><path d="M2.5 2v8m7-7.5L4 6l5.5 3.5z" fill="currentColor"/></svg></button>' +
-        '<button class="omc-mini-button" id="omc-mini-play" title="播放/暂停" aria-label="播放/暂停"><svg class="omc-play-icon" viewBox="0 0 12 12" width="15" height="15"><path d="M3 1.8L10 6 3 10.2z" fill="currentColor"/></svg><svg class="omc-pause-icon" viewBox="0 0 12 12" width="14" height="14"><path d="M3 2h2v8H3zm4 0h2v8H7z" fill="currentColor"/></svg></button>' +
-        '<button class="omc-mini-button" id="omc-mini-next" title="下一首" aria-label="下一首"><svg viewBox="0 0 12 12" width="13" height="13"><path d="M9.5 2v8m-7-7.5L8 6 2.5 9.5z" fill="currentColor"/></svg></button>' +
-        '</div></div>';
+        '<div id="omc-mini-lyrics"><div id="omc-mini-lyric-list"><div class="omc-mini-lyric-line">暂无歌词</div></div></div>' +
+        '<header class="omc-mini-toolbar" id="omc-mini-top" data-tauri-drag-region>' +
+          '<div id="omc-mini-window-actions"><button class="omc-mini-button" id="omc-mini-hide" title="隐藏" aria-label="隐藏"><svg viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="currentColor" stroke-width="1"><path d="M3.5 3.5l9 9m0-9l-9 9"/></svg></button><button class="omc-mini-button" id="omc-mini-exit" title="恢复主窗口" aria-label="恢复主窗口"><svg viewBox="0 0 16 16" width="11" height="11" fill="none" stroke="currentColor" stroke-width="1"><rect x="3.5" y="3.5" width="9" height="9"/></svg></button></div>' +
+          '<div id="omc-mini-heading" data-tauri-drag-region><div id="omc-mini-title">网易云音乐</div><div id="omc-mini-artist">等待播放</div></div>' +
+          '<div id="omc-mini-more" aria-hidden="true">•••</div>' +
+        '</header>' +
+        '<footer class="omc-mini-toolbar" id="omc-mini-bottom">' +
+          '<button id="omc-mini-thumb-toggle" title="切换 Mini 布局" aria-label="切换 Mini 布局"><img id="omc-mini-thumb" alt="专辑封面缩略图"></button>' +
+          '<div id="omc-mini-transport">' +
+            '<button class="omc-mini-button" id="omc-mini-prev" title="上一首" aria-label="上一首"><svg viewBox="0 0 20 20" width="15" height="15" fill="currentColor"><path d="M4 4h2v12H4zm3 6 9-6v12z"/></svg></button>' +
+            '<button class="omc-mini-button" id="omc-mini-play" title="播放/暂停" aria-label="播放/暂停"><svg class="omc-play-icon" viewBox="0 0 20 20" width="15" height="15" fill="currentColor"><path d="M6 3.8v12.4L16 10z"/></svg><svg class="omc-pause-icon" viewBox="0 0 20 20" width="14" height="14" fill="currentColor"><path d="M5 4h3v12H5zm7 0h3v12h-3z"/></svg></button>' +
+            '<button class="omc-mini-button" id="omc-mini-next" title="下一首" aria-label="下一首"><svg viewBox="0 0 20 20" width="15" height="15" fill="currentColor"><path d="M14 4h2v12h-2zM4 4l9 6-9 6z"/></svg></button>' +
+          '</div>' +
+          '<div id="omc-mini-tools">' +
+            '<button class="omc-mini-button" id="omc-mini-like" title="喜欢" aria-label="喜欢"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M20.8 5.8a5.4 5.4 0 0 0-7.7 0L12 7l-1.1-1.2a5.4 5.4 0 0 0-7.7 7.7L12 22l8.8-8.5a5.4 5.4 0 0 0 0-7.7z"/></svg></button>' +
+            '<button class="omc-mini-button" id="omc-mini-queue" title="播放列表" aria-label="播放列表"><svg viewBox="0 0 20 20" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.3"><path d="M7 5h9M7 10h9M7 15h9M3.5 5h.1M3.5 10h.1M3.5 15h.1" stroke-linecap="round"/></svg></button>' +
+            '<button class="omc-mini-button" id="omc-mini-lyric-toggle" title="歌词" aria-label="歌词"><svg viewBox="0 0 20 20" width="17" height="17"><text x="2" y="15" fill="currentColor" font-size="14" font-family="Microsoft YaHei UI">词</text></svg></button>' +
+            '<button class="omc-mini-button" id="omc-mini-volume" title="静音" aria-label="静音"><svg viewBox="0 0 20 20" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.3"><path d="M3 8h3l4-3v10l-4-3H3zM13 7.2c1.4 1.5 1.4 4.1 0 5.6M15.2 5c2.6 2.8 2.6 7.2 0 10" stroke-linecap="round" stroke-linejoin="round"/></svg></button>' +
+          '</div>' +
+          '<div id="omc-mini-progress"><span id="omc-mini-progress-fill"></span><span id="omc-mini-progress-thumb"></span></div>' +
+        '</footer>';
       document.documentElement.appendChild(player);
 
       player.querySelectorAll('button').forEach(function (button) {
         button.addEventListener('pointerdown', function (e) { e.stopPropagation(); });
       });
+      document.getElementById('omc-mini-hide').addEventListener('click', function () { appWin.hide(); });
       document.getElementById('omc-mini-exit').addEventListener('click', exit);
       document.getElementById('omc-mini-prev').addEventListener('click', function () { performMediaAction('previoustrack'); });
       document.getElementById('omc-mini-next').addEventListener('click', function () { performMediaAction('nexttrack'); });
       document.getElementById('omc-mini-play').addEventListener('click', function () {
         performMediaAction(lastPlaying ? 'pause' : 'play');
       });
+      document.getElementById('omc-mini-like').addEventListener('click', function () { performMediaAction('like'); });
+      document.getElementById('omc-mini-queue').addEventListener('click', function () { performMediaAction('playlist'); });
+      document.getElementById('omc-mini-lyric-toggle').addEventListener('click', toggleLyrics);
+      document.getElementById('omc-mini-volume').addEventListener('click', toggleMute);
+      document.getElementById('omc-mini-thumb-toggle').addEventListener('click', toggleCompact);
+      document.getElementById('omc-mini-art').addEventListener('dblclick', toggleLyrics);
+      document.getElementById('omc-mini-progress').addEventListener('pointerdown', seek);
       updateMetadata(lastMetadata);
       updatePlayback(lastPlaying);
+    }
+
+    function getAudio() {
+      var audio = document.querySelector('audio');
+      try {
+        var frame = document.querySelector('#g_iframe,iframe[name="contentFrame"]');
+        if (!audio && frame && frame.contentDocument) audio = frame.contentDocument.querySelector('audio');
+      } catch (error) {}
+      return audio;
+    }
+
+    function toggleLyrics() {
+      lyricMode = !lyricMode;
+      var player = document.getElementById('omc-mini-player');
+      var toggle = document.getElementById('omc-mini-lyric-toggle');
+      if (player) player.classList.toggle('omc-mini-lyrics', lyricMode);
+      if (toggle) toggle.classList.toggle('active', lyricMode);
+      if (lyricMode) loadLyrics();
+    }
+
+    function toggleMute() {
+      var audio = getAudio();
+      if (!audio) return;
+      audio.muted = !audio.muted;
+      document.getElementById('omc-mini-volume').classList.toggle('muted', audio.muted);
+    }
+
+    function toggleCompact() {
+      if (mode === 'normal' || transitioning) return;
+      transitioning = true;
+      compactMode = !compactMode;
+      var width = compactMode ? 440 : 336;
+      var height = compactMode ? 58 : 336;
+      appWin.hide()
+        .then(function () { return appWin.setMaxSize(null); })
+        .then(function () { return appWin.setMinSize(new T.window.LogicalSize(width, height)); })
+        .then(function () { return appWin.setSize(new T.window.LogicalSize(width, height)); })
+        .then(function () { return appWin.setMaxSize(new T.window.LogicalSize(width, height)); })
+        .then(function () {
+          document.getElementById('omc-mini-player').classList.toggle('omc-mini-compact', compactMode);
+          return finishTransition();
+        }, function (error) {
+          return finishTransition('[omc] failed to switch Mini layout', error);
+        });
+    }
+
+    function seek(event) {
+      var audio = getAudio();
+      if (!audio || !isFinite(audio.duration) || !audio.duration) return;
+      var bounds = event.currentTarget.getBoundingClientRect();
+      var ratio = Math.max(0, Math.min(1, (event.clientX - bounds.left) / bounds.width));
+      audio.currentTime = ratio * audio.duration;
+      updateTimeline();
+    }
+
+    function loadLyrics() {
+      var playerState = readInternalPlayerState(window);
+      var trackId = playerState && playerState.trackId;
+      if (!trackId || trackId === lyricTrackId) return;
+      lyricTrackId = trackId;
+      lyricLines = [];
+      activeLyricIndex = -1;
+      fetch('/api/song/lyric?id=' + encodeURIComponent(trackId) + '&lv=-1&kv=-1&tv=-1', { credentials: 'include' })
+        .then(function (response) { return response.json(); })
+        .then(function (result) {
+          var source = result && result.lrc && result.lrc.lyric || '';
+          source.split(/\r?\n/).forEach(function (line) {
+            var text = line.replace(/\[(\d+):(\d+(?:\.\d+)?)\]/g, '').trim();
+            var match;
+            var times = /\[(\d+):(\d+(?:\.\d+)?)\]/g;
+            while ((match = times.exec(line))) {
+              if (text) lyricLines.push({ time: Number(match[1]) * 60 + Number(match[2]), text: text });
+            }
+          });
+          lyricLines.sort(function (a, b) { return a.time - b.time; });
+          renderLyrics();
+          updateTimeline();
+        }).catch(function () {
+          renderLyrics();
+        });
+    }
+
+    function renderLyrics() {
+      var list = document.getElementById('omc-mini-lyric-list');
+      if (!list) return;
+      list.innerHTML = '';
+      var lines = lyricLines.length ? lyricLines : [{ time: 0, text: '暂无歌词' }];
+      lines.forEach(function (line) {
+        var node = document.createElement('div');
+        node.className = 'omc-mini-lyric-line';
+        node.textContent = line.text;
+        list.appendChild(node);
+      });
+      list.style.transform = 'translateY(0)';
+    }
+
+    function updateTimeline() {
+      if (mode === 'normal') return;
+      var audio = getAudio();
+      var ratio = audio && isFinite(audio.duration) && audio.duration ? audio.currentTime / audio.duration : 0;
+      var fill = document.getElementById('omc-mini-progress-fill');
+      var thumb = document.getElementById('omc-mini-progress-thumb');
+      if (fill) fill.style.width = (ratio * 100) + '%';
+      if (thumb) thumb.style.left = (ratio * 100) + '%';
+
+      var state = readInternalPlayerState(window);
+      var like = document.getElementById('omc-mini-like');
+      if (like && state && typeof state.liked === 'boolean') like.classList.toggle('liked', state.liked);
+      if (state && state.trackId !== lyricTrackId) loadLyrics();
+      if (!lyricMode || !audio || !lyricLines.length) return;
+
+      var index = -1;
+      for (var i = 0; i < lyricLines.length && lyricLines[i].time <= audio.currentTime; i++) index = i;
+      if (index === activeLyricIndex) return;
+      activeLyricIndex = index;
+      var list = document.getElementById('omc-mini-lyric-list');
+      var viewport = document.getElementById('omc-mini-lyrics');
+      if (!list || !viewport) return;
+      Array.prototype.forEach.call(list.children, function (line, lineIndex) {
+        line.classList.toggle('active', lineIndex === index);
+      });
+      var active = list.children[index];
+      if (active) {
+        var offset = viewport.clientHeight / 2 - active.offsetTop - active.offsetHeight / 2;
+        list.style.transform = 'translateY(' + offset + 'px)';
+      }
     }
 
     function enter() {
@@ -329,12 +509,15 @@
         };
         return appWin.hide()
           .then(function () { return state[3] ? appWin.unmaximize() : Promise.resolve(); })
-          .then(function () { return appWin.setMinSize(new T.window.LogicalSize(320, 320)); })
-          .then(function () { return appWin.setSize(new T.window.LogicalSize(320, 320)); })
+          .then(function () { return appWin.setMaxSize(null); })
+          .then(function () { return appWin.setMinSize(new T.window.LogicalSize(336, 336)); })
+          .then(function () { return appWin.setSize(new T.window.LogicalSize(336, 336)); })
+          .then(function () { return appWin.setMaxSize(new T.window.LogicalSize(336, 336)); })
           .then(function () { return appWin.setAlwaysOnTop(true); });
       }).then(function () {
         mode = 'expanded';
         document.documentElement.classList.add('omc-mini-active');
+        loadLyrics();
         return finishTransition();
       }, function (error) {
         return finishTransition('[omc] failed to enter Mini mode', error);
@@ -348,9 +531,13 @@
       appWin.hide()
         .then(function () {
           document.documentElement.classList.remove('omc-mini-active');
+          document.getElementById('omc-mini-player').classList.remove('omc-mini-compact', 'omc-mini-lyrics');
+          compactMode = false;
+          lyricMode = false;
           mode = 'normal';
           return appWin.setAlwaysOnTop(false);
         })
+        .then(function () { return appWin.setMaxSize(null); })
         .then(function () { return appWin.setMinSize(new T.window.LogicalSize(800, 600)); })
         .then(function () {
           if (!state) return;
@@ -371,11 +558,13 @@
       if (!title) return;
       var artist = document.getElementById('omc-mini-artist');
       var cover = document.getElementById('omc-mini-cover');
+      var thumb = document.getElementById('omc-mini-thumb');
       title.textContent = (lastMetadata && lastMetadata.title) || '网易云音乐';
       artist.textContent = (lastMetadata && lastMetadata.artist) || '等待播放';
       var artwork = lastMetadata && lastMetadata.artwork;
       if (artwork) {
         cover.src = artwork;
+        thumb.src = artwork;
       }
     }
 
@@ -387,6 +576,7 @@
 
     if (document.documentElement) mount();
     else document.addEventListener('DOMContentLoaded', mount, { once: true });
+    setInterval(updateTimeline, 250);
 
     return {
       enter: enter,
@@ -406,7 +596,8 @@
         play: '#btn_pc_minibar_play',
         pause: '#btn_pc_minibar_play',
         nexttrack: '[aria-label="next"]',
-        previoustrack: '[aria-label="pre"]'
+        previoustrack: '[aria-label="pre"]',
+        playlist: '#page_pc_mini_bar [aria-label="playlist"],#page_pc_minibar [aria-label="playlist"]'
       };
       var likeState = action === 'like' ? readLoggedLikeControl(document) || readInternalPlayerState(window) : null;
       var button = action === 'like' ? findLikeButton(document) : document.querySelector(selectors[action]);
@@ -429,24 +620,11 @@
       }
       if (button) {
         if (button.tagName !== 'BUTTON') button = button.closest('button') || button;
-        if (action === 'like' && window.__TAURI__) {
-          window.__TAURI__.core.invoke('report_like_diagnostic', {
-            message: 'click before=' + JSON.stringify(likeState) + ' button=' + button.outerHTML.slice(0, 1000)
-          });
-        }
         button.click();
         if (action === 'like') {
           window.dispatchEvent(new CustomEvent('omc-like-toggle', {
             detail: likeState ? { trackId: likeState.trackId, liked: !likeState.liked } : null
           }));
-          setTimeout(function () {
-            var afterState = readInternalPlayerState(window);
-            if (window.__TAURI__) {
-              window.__TAURI__.core.invoke('report_like_diagnostic', {
-                message: 'click after=' + JSON.stringify(afterState) + ' dom=' + readLikeState(document)
-              });
-            }
-          }, 800);
         }
         return;
       }
@@ -719,12 +897,14 @@
     }
 
     document.addEventListener('pointerdown', function (e) {
+      if (document.documentElement.classList.contains('omc-mini-active')) return;
       if (e.button !== 0 || !isInDragBand(e) || !isDraggableTarget(e.target)) return;
       e.preventDefault();
       appWin.startDragging();
     }, true);
 
     document.addEventListener('dblclick', function (e) {
+      if (document.documentElement.classList.contains('omc-mini-active')) return;
       if (!isInDragBand(e) || !isDraggableTarget(e.target)) return;
       e.preventDefault();
       appWin.isMaximized().then(function (isMaximized) {
@@ -746,15 +926,7 @@
     var likedTrackIds = null;
     var likedTracksLoading = false;
     var likedTracksRetryAt = 0;
-    var lastLikeDiagnostic = '';
-    var reportedLikeDom = false;
     window.__omc_media_handlers = {};
-
-    function reportLikeDiagnostic(message) {
-      if (!invoke || message === lastLikeDiagnostic) return;
-      lastLikeDiagnostic = message;
-      invoke('report_like_diagnostic', { message: message });
-    }
 
     function loadLikedTracks() {
       if (likedTracksLoading || Date.now() < likedTracksRetryAt) return;
@@ -779,12 +951,10 @@
             return String(track.id);
           }));
           likedTracksLoading = false;
-          reportLikeDiagnostic('liked playlist loaded: ' + likedTrackIds.size + ' tracks');
           update();
-        }).catch(function (error) {
+        }).catch(function () {
           likedTracksLoading = false;
           likedTracksRetryAt = Date.now() + 30000;
-          reportLikeDiagnostic('liked playlist failed: ' + (error && error.message || error));
         });
     }
 
@@ -836,21 +1006,11 @@
         if (!internalState && window !== window.top) internalState = readInternalPlayerState(window.top);
         var trackId = internalState && internalState.trackId || loggedState && loggedState.trackId || readCurrentTrackId(mediaDocument);
         if (!trackId && mediaDocument !== document) trackId = readCurrentTrackId(document);
-        if (!trackId && !reportedLikeDom && (meta || audio || domState)) {
-          var diagnosticInfo = mediaDocument.querySelector('[class*="songPlayInfo"]') || document.querySelector('[class*="songPlayInfo"]');
-          var diagnosticPlayers = Array.prototype.slice.call(mediaDocument.querySelectorAll('[id*="mini"],[class*="mini"],[id*="play"],[class*="play"]'), 0, 40).map(function (node) {
-            return node.tagName + '#' + node.id + '.' + (typeof node.className === 'string' ? node.className : '');
-          });
-          reportedLikeDom = true;
-          reportLikeDiagnostic('DOM=' + (diagnosticInfo ? diagnosticInfo.outerHTML.slice(0, 12000) : 'missing') + '\nCANDIDATES=' + diagnosticPlayers.join('|'));
-        }
-        var domLiked = internalState && internalState.liked;
         if (trackId && !likedTrackIds) loadLikedTracks();
         var liked = likedTrackIds && trackId
           ? likedTrackIds.has(String(trackId))
           : (internalState && typeof internalState.liked === 'boolean' ? internalState.liked : readLikeState(mediaDocument));
         if (liked === null && mediaDocument !== document) liked = readLikeState(document);
-        reportLikeDiagnostic('track=' + trackId + ' dom=' + domLiked + ' cache=' + (likedTrackIds ? likedTrackIds.size : 'none') + ' liked=' + liked);
         observeLikePlayer(
           mediaDocument.querySelector('#page_pc_mini_bar,#page_pc_minibar,[id*="page_pc_mini"]') ||
           document.querySelector('#page_pc_mini_bar,#page_pc_minibar,[id*="page_pc_mini"]')
