@@ -12,7 +12,7 @@ use tauri_plugin_global_shortcut::{Code, GlobalShortcutExt, Modifiers, Shortcut}
 #[cfg(windows)]
 use windows::Win32::{
     Foundation::{POINT, RECT},
-    Graphics::Gdi::{ClientToScreen, CreateRectRgn, SetWindowRgn},
+    Graphics::Gdi::{ClientToScreen, CreateRoundRectRgn, SetWindowRgn},
     UI::WindowsAndMessaging::{
         GetClientRect, GetWindowRect, SetWindowPos, SWP_NOACTIVATE, SWP_NOZORDER,
     },
@@ -142,20 +142,22 @@ fn animate_window_size_anchored_bottom(
     let target_client_width = (width * scale).round() as i32;
     let target_client_height = (height * scale).round() as i32;
     let target_outer_width = target_client_width + frame_width;
-    let target_outer_height = target_client_height + frame_height;
     let expanding = target_client_height > source_client_height;
     let animation_client_height = source_client_height.max(target_client_height);
     let animation_outer_height = animation_client_height + frame_height;
-    let steps = 10;
+    let steps = (duration / 16).max(1);
 
     let set_region = |visible_height: i32| -> Result<(), String> {
         let bottom = client_top + animation_client_height;
+        let corner_radius = (8.0 * scale).round() as i32;
         let region = unsafe {
-            CreateRectRgn(
+            CreateRoundRectRgn(
                 client_left,
                 bottom - visible_height,
-                client_left + target_client_width,
-                bottom,
+                client_left + target_client_width + 1,
+                bottom + 1,
+                corner_radius * 2,
+                corner_radius * 2,
             )
         };
         if unsafe { SetWindowRgn(hwnd, Some(region), true) } == 0 {
@@ -191,22 +193,47 @@ fn animate_window_size_anchored_bottom(
         std::thread::sleep(std::time::Duration::from_millis(duration / steps));
     }
 
-    if !expanding {
-        unsafe {
-            SetWindowPos(
-                hwnd,
-                None,
-                window_rect.left,
-                window_rect.bottom - target_outer_height,
-                target_outer_width,
-                target_outer_height,
-                SWP_NOACTIVATE | SWP_NOZORDER,
-            )
-            .map_err(|error| error.to_string())?;
-        }
+    if expanding {
+        unsafe { SetWindowRgn(hwnd, None, true) };
     }
-    unsafe { SetWindowRgn(hwnd, None, true) };
+    Ok(())
+}
 
+#[cfg(windows)]
+#[tauri::command]
+fn finish_window_region_animation(
+    window: tauri::WebviewWindow,
+    width: f64,
+    height: f64,
+) -> Result<(), String> {
+    let hwnd = window.hwnd().map_err(|error| error.to_string())?;
+    let scale = window.scale_factor().map_err(|error| error.to_string())?;
+    let mut window_rect = RECT::default();
+    let mut client_rect = RECT::default();
+    unsafe {
+        GetWindowRect(hwnd, &mut window_rect).map_err(|error| error.to_string())?;
+        GetClientRect(hwnd, &mut client_rect).map_err(|error| error.to_string())?;
+    }
+
+    let frame_width =
+        (window_rect.right - window_rect.left) - (client_rect.right - client_rect.left);
+    let frame_height =
+        (window_rect.bottom - window_rect.top) - (client_rect.bottom - client_rect.top);
+    let target_outer_width = (width * scale).round() as i32 + frame_width;
+    let target_outer_height = (height * scale).round() as i32 + frame_height;
+    unsafe {
+        SetWindowPos(
+            hwnd,
+            None,
+            window_rect.left,
+            window_rect.bottom - target_outer_height,
+            target_outer_width,
+            target_outer_height,
+            SWP_NOACTIVATE | SWP_NOZORDER,
+        )
+        .map_err(|error| error.to_string())?;
+        SetWindowRgn(hwnd, None, true);
+    }
     Ok(())
 }
 
@@ -262,6 +289,7 @@ pub fn run() {
             open_login_window,
             on_login_success,
             animate_window_size_anchored_bottom,
+            finish_window_region_animation,
             qr_generate,
             qr_check,
             tray::get_tray_state,
