@@ -138,7 +138,7 @@ pub fn run() {
             .min_inner_size(800.0, 600.0)
             .decorations(false)
             .resizable(true)
-            .visible(true)
+            .visible(false)
             .user_agent(USER_AGENT)
             .initialization_script(INJECT_JS)
             .on_navigation(move |url| {
@@ -160,6 +160,22 @@ pub fn run() {
                 true
             })
             .build()?;
+
+            let startup_app = app.handle().clone();
+            std::thread::spawn(move || {
+                std::thread::sleep(std::time::Duration::from_secs(2));
+                let fallback_app = startup_app.clone();
+                if let Err(error) = startup_app.run_on_main_thread(move || {
+                    if let Some(window) = fallback_app.get_webview_window("main") {
+                        if !window.is_visible().unwrap_or(false) {
+                            let _ = window.show();
+                            let _ = window.set_focus();
+                        }
+                    }
+                }) {
+                    eprintln!("[omc] failed to schedule startup window fallback: {error}");
+                }
+            });
 
             if let Err(e) = tray::create_tray(app.handle()) {
                 eprintln!("[omc] tray error: {}", e);

@@ -178,16 +178,35 @@
     }
     appWin.onMoved(function () { clearTimeout(saveTimer); saveTimer = setTimeout(save, 500); });
     appWin.onResized(function () { clearTimeout(saveTimer); saveTimer = setTimeout(save, 500); });
+    var restoreWindow = Promise.resolve();
     try {
       var s = JSON.parse(localStorage.getItem('omc-ws'));
       if (s) {
-        if (s.m) appWin.maximize();
-        else {
-          if (s.w && s.h) appWin.setSize(new T.window.LogicalSize(s.w, s.h));
-          if (s.x != null && s.y != null) appWin.setPosition(new T.window.LogicalPosition(s.x, s.y));
+        if (s.m) {
+          restoreWindow = appWin.maximize();
+        } else {
+          if (s.w && s.h) {
+            restoreWindow = restoreWindow.then(function () {
+              return appWin.setSize(new T.window.LogicalSize(s.w, s.h));
+            });
+          }
+          if (s.x != null && s.y != null) {
+            restoreWindow = restoreWindow.then(function () {
+              return appWin.setPosition(new T.window.LogicalPosition(s.x, s.y));
+            });
+          }
         }
       }
     } catch (x) {}
+    restoreWindow.catch(function (error) {
+      console.error('[omc] failed to restore window state', error);
+    }).then(function () {
+      return appWin.show();
+    }).then(function () {
+      return appWin.setFocus();
+    }).catch(function (error) {
+      console.error('[omc] failed to show main window', error);
+    });
   }
 
   function setupWindowControls(appWin, host, floating, miniPlayer) {
