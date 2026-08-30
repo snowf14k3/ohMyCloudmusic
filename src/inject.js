@@ -25,24 +25,26 @@
     '.omc-mini-active #omc-mini-player{display:block}' +
     '.omc-mini-active #omc-window-controls{display:none}' +
     '#omc-mini-art{position:absolute;inset:0;overflow:hidden;background:linear-gradient(145deg,#29292d,#111);-webkit-app-region:no-drag}' +
-    '#omc-mini-cover{width:100%;height:100%;display:block;object-fit:cover;transition:filter .32s ease,transform .32s ease,opacity .32s ease}' +
+    '#omc-mini-cover{width:100%;height:100%;display:block;object-fit:cover;user-select:none;-webkit-user-drag:none;-webkit-app-region:no-drag;transition:filter .32s ease,transform .32s ease,opacity .32s ease}' +
     '.omc-mini-lyrics #omc-mini-cover{filter:blur(18px) brightness(.42);transform:scale(1.16);opacity:.72}' +
-    '#omc-mini-lyrics{position:absolute;inset:48px 18px 58px;z-index:2;display:flex;align-items:center;overflow:hidden;opacity:0;pointer-events:none;transition:opacity .25s ease}' +
+    '#omc-mini-lyrics{position:absolute;inset:48px 18px 58px;z-index:2;display:flex;align-items:flex-start;overflow:hidden;opacity:0;pointer-events:none;transition:opacity .25s ease}' +
     '.omc-mini-lyrics #omc-mini-lyrics{opacity:1}' +
     '#omc-mini-lyric-list{width:100%;padding:110px 0;color:rgba(255,255,255,.48);text-align:center;font-size:13px;line-height:30px;transition:transform .34s cubic-bezier(.22,.72,.25,1)}' +
     '.omc-mini-lyric-line{min-height:30px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;transition:color .2s ease,font-size .2s ease,font-weight .2s ease}' +
-    '.omc-mini-lyric-line.active{color:#fff;font-size:15px;font-weight:600}' +
+    '.omc-mini-lyric-line.active{color:#fff;font-size:15px;font-weight:700;text-shadow:0 1px 9px rgba(255,255,255,.3)}' +
     '.omc-mini-toolbar{position:absolute;left:0;right:0;z-index:5;color:#303238;background:rgba(250,250,249,.965);backdrop-filter:blur(18px);opacity:0;pointer-events:none;transition:opacity .16s ease,transform .18s ease}' +
-    '#omc-mini-player:hover .omc-mini-toolbar,#omc-mini-player:focus-within .omc-mini-toolbar{opacity:1;transform:translateY(0);pointer-events:auto}' +
-    '#omc-mini-top{top:0;height:50px;display:grid;grid-template-columns:54px 1fr 42px;align-items:center;transform:translateY(-100%);-webkit-app-region:drag}' +
+    '#omc-mini-player.omc-mini-cover-hover .omc-mini-toolbar{opacity:1;transform:translateY(0);pointer-events:auto}' +
+    '#omc-mini-top{top:0;height:50px;display:grid;grid-template-columns:42px 1fr 42px;align-items:center;transform:translateY(-100%);-webkit-app-region:drag}' +
     '#omc-mini-window-actions{display:flex;align-items:center;padding-left:6px;-webkit-app-region:no-drag}' +
+    '#omc-mini-player:not(.omc-mini-compact) #omc-mini-window-actions{height:46px;padding:2px 0 2px 6px;flex-direction:column;align-items:flex-start;justify-content:center}' +
+    '#omc-mini-player:not(.omc-mini-compact) #omc-mini-window-actions .omc-mini-button{width:20px;height:20px}' +
     '#omc-mini-heading{min-width:0;text-align:center;line-height:1.25}' +
     '#omc-mini-title{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px;font-weight:500;color:#303238}' +
     '#omc-mini-artist{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-top:2px;font-size:11px;color:#898b91}' +
     '#omc-mini-more{justify-self:center;letter-spacing:2px;color:#92949a;font-size:15px;-webkit-app-region:no-drag}' +
     '#omc-mini-bottom{bottom:0;height:58px;padding:5px 8px 10px;display:flex;align-items:center;gap:6px;transform:translateY(100%);-webkit-app-region:no-drag}' +
     '#omc-mini-thumb{width:36px;height:36px;flex:0 0 auto;border-radius:3px;object-fit:cover;background:#ddd}' +
-    '#omc-mini-transport{display:flex;align-items:center;gap:2px}' +
+    '#omc-mini-transport{position:absolute;left:50%;top:50%;display:flex;align-items:center;gap:2px;transform:translate(-50%,-50%)}' +
     '#omc-mini-tools{margin-left:auto;display:flex;align-items:center;gap:1px}' +
     '.omc-mini-button{appearance:none;width:28px;height:28px;padding:0;display:grid;place-items:center;border:0;border-radius:50%;background:transparent;color:#73767e;cursor:default;-webkit-app-region:no-drag;transition:color .12s ease,background-color .12s ease,transform .1s ease}' +
     '.omc-mini-button:hover{color:#292b31;background:#ececeb}' +
@@ -54,7 +56,6 @@
     '#omc-mini-play[data-playing="true"] .omc-pause-icon{display:block}' +
     '#omc-mini-like.liked{color:#ec4141}' +
     '#omc-mini-like.liked svg{fill:currentColor}' +
-    '#omc-mini-lyric-toggle.active{color:#df3b3b;background:#fff0ef}' +
     '#omc-mini-volume.muted{color:#b2b3b7}' +
     '#omc-mini-progress{position:absolute;left:54px;right:10px;bottom:5px;height:3px;border-radius:2px;background:#c9c9c9;cursor:pointer;-webkit-app-region:no-drag}' +
     '#omc-mini-progress-fill{display:block;width:0;height:100%;border-radius:inherit;background:#df3b3b}' +
@@ -70,6 +71,29 @@
     '#omc-mini-thumb-toggle:hover::after{opacity:1}' +
     '.omc-mini-compact #omc-mini-thumb-toggle::after{content:"↕";opacity:1;font-size:17px;font-weight:600}' +
     '.omc-mini-compact #omc-mini-thumb-toggle:hover::after{background:rgba(25,27,31,.86)}' +
+    '#omc-mini-queue-view{position:absolute;left:0;right:0;bottom:0;z-index:4;display:none;top:100vw;height:auto;overflow:hidden;background:#fafafa;color:#27292e;border-top:1px solid rgba(0,0,0,.08);opacity:0;transition:opacity .14s ease}' +
+    '.omc-mini-queue-open #omc-mini-art{bottom:auto;height:100vw}' +
+    '.omc-mini-queue-open .omc-mini-toolbar{transform:none}' +
+    '.omc-mini-queue-open #omc-mini-bottom{top:calc(100vw - 58px);bottom:auto;transform:none}' +
+    '.omc-mini-queue-open #omc-mini-queue-view{display:block;opacity:1}' +
+    '#omc-mini-queue-list{height:100%;overflow-y:auto;scrollbar-width:none}' +
+    '#omc-mini-queue-list::-webkit-scrollbar{display:none;width:0;height:0}' +
+    '#omc-mini-queue-scrollbar{position:absolute;top:3px;right:2px;bottom:3px;width:5px}' +
+    '#omc-mini-queue-scroll-thumb{position:absolute;top:0;right:0;width:4px;min-height:22px;border-radius:4px;background:#b7b7b7;opacity:.82;cursor:default}' +
+    '.omc-mini-queue-row{height:34px;padding:0 22px;display:flex;align-items:center;gap:8px;cursor:default;font-size:12px;background:#fafafa}' +
+    '.omc-mini-queue-row:nth-child(odd){background:#f4f4f4}' +
+    '.omc-mini-queue-row:hover{background:#ececec}' +
+    '.omc-mini-queue-row.active{color:#df3b3b}' +
+    '.omc-mini-queue-title{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}' +
+    '.omc-mini-queue-artist{margin-left:auto;max-width:34%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#97999e;font-size:10px}' +
+    '.omc-mini-queue-row.active .omc-mini-queue-artist{color:#df7777}' +
+    '#omc-mini-context{position:fixed;z-index:12;display:none;width:112px;padding:4px;border:1px solid rgba(0,0,0,.12);border-radius:5px;background:rgba(250,250,249,.98);box-shadow:0 5px 18px rgba(0,0,0,.22);color:#303238;font-size:12px;backdrop-filter:blur(16px);-webkit-app-region:no-drag}' +
+    '#omc-mini-context.open{display:block}' +
+    '.omc-mini-context-item{appearance:none;width:100%;height:28px;padding:0 8px;display:flex;align-items:center;gap:7px;border:0;border-radius:3px;background:transparent;color:inherit;text-align:left;font:inherit;cursor:default}' +
+    '.omc-mini-context-item:hover{background:#e8e8e7}' +
+    '.omc-mini-context-check{width:12px;text-align:center;visibility:hidden}' +
+    '#omc-mini-context-topmost[aria-checked="true"] .omc-mini-context-check{visibility:visible}' +
+    '@media(max-width:300px){#omc-mini-thumb-toggle,#omc-mini-like{display:none}#omc-mini-progress{left:10px}}' +
     '@media(hover:none){.omc-mini-toolbar{opacity:1!important;transform:none!important;pointer-events:auto!important}}';
 
   function mountStyles() {
@@ -89,11 +113,12 @@
         performMediaAction(event.data.action);
       }
     });
-    setupMediaPolling(null, null, function (metadata, playing) {
+    setupMediaPolling(null, null, function (metadata, playing, timeline) {
       window.top.postMessage({
         type: 'omc-media-state',
         metadata: metadata,
-        playing: playing
+        playing: playing,
+        timeline: timeline
       }, 'https://music.163.com');
     });
     return;
@@ -141,7 +166,8 @@
           });
         }
       }
-      miniPlayer.updatePlayback(playing);
+      miniPlayer.updatePlayback(playing, true);
+      miniPlayer.updateTimeline(event.data.timeline);
       if (playing !== bridgedPlaying) {
         bridgedPlaying = playing;
         invoke('update_play_status', { playing: playing });
@@ -304,6 +330,17 @@
     var lastPlaying = false;
     var lyricMode = false;
     var compactMode = false;
+    var queueMode = false;
+    var queueRenderKey = '';
+    var preQueueHeight = 336;
+    var miniDragCandidate = null;
+    var queueScrollDrag = null;
+    var alwaysOnTop = true;
+    var syncedTimeline = null;
+    var syncedTimelineAt = 0;
+    var bridgedPlaybackAt = 0;
+    var liveInternalProgress = null;
+    var internalProgressSubscribed = false;
     var lyricTrackId = null;
     var lyricLines = [];
     var activeLyricIndex = -1;
@@ -314,9 +351,7 @@
         return appWin.setFocus();
       }).catch(function (showError) {
         console.error('[omc] failed to reveal window after Mini transition', showError);
-      }).then(function () {
-        transitioning = false;
-      });
+      }).then(function () { transitioning = false; });
     }
 
     function mount() {
@@ -325,12 +360,12 @@
       player.id = 'omc-mini-player';
       player.setAttribute('aria-label', 'Mini 播放器');
       player.innerHTML =
-        '<div id="omc-mini-art"><img id="omc-mini-cover" alt="专辑封面"></div>' +
+        '<div id="omc-mini-art"><img id="omc-mini-cover" alt="专辑封面" draggable="false"></div>' +
         '<div id="omc-mini-lyrics"><div id="omc-mini-lyric-list"><div class="omc-mini-lyric-line">暂无歌词</div></div></div>' +
         '<header class="omc-mini-toolbar" id="omc-mini-top" data-tauri-drag-region>' +
           '<div id="omc-mini-window-actions"><button class="omc-mini-button" id="omc-mini-hide" title="隐藏" aria-label="隐藏"><svg viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="currentColor" stroke-width="1"><path d="M3.5 3.5l9 9m0-9l-9 9"/></svg></button><button class="omc-mini-button" id="omc-mini-exit" title="恢复主窗口" aria-label="恢复主窗口"><svg viewBox="0 0 16 16" width="11" height="11" fill="none" stroke="currentColor" stroke-width="1"><rect x="3.5" y="3.5" width="9" height="9"/></svg></button></div>' +
           '<div id="omc-mini-heading" data-tauri-drag-region><div id="omc-mini-title">网易云音乐</div><div id="omc-mini-artist">等待播放</div></div>' +
-          '<div id="omc-mini-more" aria-hidden="true">•••</div>' +
+          '<button class="omc-mini-button" id="omc-mini-more" title="播放队列" aria-label="播放队列">•••</button>' +
         '</header>' +
         '<footer class="omc-mini-toolbar" id="omc-mini-bottom">' +
           '<button id="omc-mini-thumb-toggle" title="切换 Mini 布局" aria-label="切换 Mini 布局"><img id="omc-mini-thumb" alt="专辑封面缩略图"></button>' +
@@ -342,11 +377,12 @@
           '<div id="omc-mini-tools">' +
             '<button class="omc-mini-button" id="omc-mini-like" title="喜欢" aria-label="喜欢"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M20.8 5.8a5.4 5.4 0 0 0-7.7 0L12 7l-1.1-1.2a5.4 5.4 0 0 0-7.7 7.7L12 22l8.8-8.5a5.4 5.4 0 0 0 0-7.7z"/></svg></button>' +
             '<button class="omc-mini-button" id="omc-mini-queue" title="播放列表" aria-label="播放列表"><svg viewBox="0 0 20 20" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.3"><path d="M7 5h9M7 10h9M7 15h9M3.5 5h.1M3.5 10h.1M3.5 15h.1" stroke-linecap="round"/></svg></button>' +
-            '<button class="omc-mini-button" id="omc-mini-lyric-toggle" title="歌词" aria-label="歌词"><svg viewBox="0 0 20 20" width="17" height="17"><text x="2" y="15" fill="currentColor" font-size="14" font-family="Microsoft YaHei UI">词</text></svg></button>' +
             '<button class="omc-mini-button" id="omc-mini-volume" title="静音" aria-label="静音"><svg viewBox="0 0 20 20" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.3"><path d="M3 8h3l4-3v10l-4-3H3zM13 7.2c1.4 1.5 1.4 4.1 0 5.6M15.2 5c2.6 2.8 2.6 7.2 0 10" stroke-linecap="round" stroke-linejoin="round"/></svg></button>' +
           '</div>' +
           '<div id="omc-mini-progress"><span id="omc-mini-progress-fill"></span><span id="omc-mini-progress-thumb"></span></div>' +
-        '</footer>';
+        '</footer>' +
+        '<section id="omc-mini-queue-view"><div id="omc-mini-queue-list"></div><div id="omc-mini-queue-scrollbar"><div id="omc-mini-queue-scroll-thumb" role="scrollbar" aria-label="播放队列滚动条"></div></div></section>' +
+        '<div id="omc-mini-context" role="menu"><button class="omc-mini-context-item" id="omc-mini-context-restore" role="menuitem"><span class="omc-mini-context-check"></span><span>回到主界面</span></button><button class="omc-mini-context-item" id="omc-mini-context-topmost" role="menuitemcheckbox" aria-checked="true"><span class="omc-mini-context-check">✓</span><span>总在最前</span></button></div>';
       document.documentElement.appendChild(player);
 
       player.querySelectorAll('button').forEach(function (button) {
@@ -360,14 +396,117 @@
         performMediaAction(lastPlaying ? 'pause' : 'play');
       });
       document.getElementById('omc-mini-like').addEventListener('click', function () { performMediaAction('like'); });
-      document.getElementById('omc-mini-queue').addEventListener('click', function () { performMediaAction('playlist'); });
-      document.getElementById('omc-mini-lyric-toggle').addEventListener('click', toggleLyrics);
+      document.getElementById('omc-mini-queue').addEventListener('click', toggleQueue);
+      document.getElementById('omc-mini-more').addEventListener('click', toggleQueue);
+      document.getElementById('omc-mini-queue-list').addEventListener('scroll', updateQueueScrollbar);
+      document.getElementById('omc-mini-queue-scrollbar').addEventListener('pointerdown', jumpQueueScrollbar);
+      document.getElementById('omc-mini-queue-scroll-thumb').addEventListener('pointerdown', startQueueScrollbarDrag);
+      document.addEventListener('pointermove', dragQueueScrollbar);
+      document.addEventListener('pointerup', stopQueueScrollbarDrag);
+      document.addEventListener('pointercancel', stopQueueScrollbarDrag);
       document.getElementById('omc-mini-volume').addEventListener('click', toggleMute);
       document.getElementById('omc-mini-thumb-toggle').addEventListener('click', toggleCompact);
       document.getElementById('omc-mini-art').addEventListener('dblclick', toggleLyrics);
+      document.getElementById('omc-mini-art').addEventListener('contextmenu', showContextMenu);
       document.getElementById('omc-mini-progress').addEventListener('pointerdown', seek);
+      document.getElementById('omc-mini-context-restore').addEventListener('click', function () {
+        hideContextMenu();
+        exit();
+      });
+      document.getElementById('omc-mini-context-topmost').addEventListener('click', toggleAlwaysOnTop);
+      player.addEventListener('pointerdown', prepareMiniWindowDrag);
+      player.addEventListener('pointermove', continueMiniWindowDrag);
+      player.addEventListener('pointerup', cancelMiniWindowDrag);
+      player.addEventListener('pointercancel', cancelMiniWindowDrag);
+      player.addEventListener('pointermove', updateMiniHover);
+      player.addEventListener('pointerleave', function () { player.classList.remove('omc-mini-cover-hover'); });
+      document.addEventListener('pointerdown', function (event) {
+        if (!event.target.closest('#omc-mini-context')) hideContextMenu();
+      });
+      document.addEventListener('keydown', function (event) {
+        if (event.key === 'Escape') hideContextMenu();
+      });
       updateMetadata(lastMetadata);
       updatePlayback(lastPlaying);
+      subscribeInternalProgress();
+      setTimeout(function () { renderQueue(false, true); }, 800);
+      setInterval(function () { if (!queueMode) renderQueue(false, true); }, 2000);
+    }
+
+    function subscribeInternalProgress() {
+      if (internalProgressSubscribed) return;
+      var attempts = 0;
+      var timer = setInterval(function () {
+        attempts += 1;
+        try {
+          readInternalPlayerState(window);
+          var require = window.__omcWebpackRequire;
+          var progressStream = require && require(167).e;
+          if (!progressStream || typeof progressStream.subscribe !== 'function') throw new Error('progress stream unavailable');
+          progressStream.subscribe(function (progress) {
+            liveInternalProgress = Array.isArray(progress) ? progress[0] : progress;
+            updateTimeline();
+          });
+          internalProgressSubscribed = true;
+          clearInterval(timer);
+        } catch (error) {
+          if (attempts >= 100) clearInterval(timer);
+        }
+      }, 100);
+    }
+
+    function updateMiniHover(event) {
+      var coverHeight = queueMode ? Math.min(window.innerWidth, window.innerHeight) : window.innerHeight;
+      event.currentTarget.classList.toggle('omc-mini-cover-hover', event.clientY >= 0 && event.clientY <= coverHeight);
+    }
+
+    function prepareMiniWindowDrag(event) {
+      if (event.button !== 0 || mode === 'normal') return;
+      if (event.target.closest('button,#omc-mini-progress,#omc-mini-queue-view,#omc-mini-context,.omc-mini-toolbar')) return;
+      hideContextMenu();
+      miniDragCandidate = { pointerId: event.pointerId, x: event.clientX, y: event.clientY };
+    }
+
+    function continueMiniWindowDrag(event) {
+      if (!miniDragCandidate || miniDragCandidate.pointerId !== event.pointerId || !(event.buttons & 1)) return;
+      var x = event.clientX - miniDragCandidate.x;
+      var y = event.clientY - miniDragCandidate.y;
+      if (x * x + y * y < 16) return;
+      miniDragCandidate = null;
+      event.preventDefault();
+      appWin.startDragging().catch(function (error) {
+        console.error('[omc] failed to drag Mini window', error);
+      });
+    }
+
+    function cancelMiniWindowDrag(event) {
+      if (miniDragCandidate && miniDragCandidate.pointerId === event.pointerId) miniDragCandidate = null;
+    }
+
+    function showContextMenu(event) {
+      if (mode === 'normal') return;
+      event.preventDefault();
+      event.stopPropagation();
+      var menu = document.getElementById('omc-mini-context');
+      menu.style.left = Math.max(4, Math.min(event.clientX, window.innerWidth - 120)) + 'px';
+      menu.style.top = Math.max(4, Math.min(event.clientY, window.innerHeight - 68)) + 'px';
+      menu.classList.add('open');
+    }
+
+    function hideContextMenu() {
+      var menu = document.getElementById('omc-mini-context');
+      if (menu) menu.classList.remove('open');
+    }
+
+    function toggleAlwaysOnTop() {
+      var next = !alwaysOnTop;
+      appWin.setAlwaysOnTop(next).then(function () {
+        alwaysOnTop = next;
+        document.getElementById('omc-mini-context-topmost').setAttribute('aria-checked', String(next));
+        hideContextMenu();
+      }).catch(function (error) {
+        console.error('[omc] failed to change always-on-top state', error);
+      });
     }
 
     function getAudio() {
@@ -382,9 +521,7 @@
     function toggleLyrics() {
       lyricMode = !lyricMode;
       var player = document.getElementById('omc-mini-player');
-      var toggle = document.getElementById('omc-mini-lyric-toggle');
       if (player) player.classList.toggle('omc-mini-lyrics', lyricMode);
-      if (toggle) toggle.classList.toggle('active', lyricMode);
       if (lyricMode) loadLyrics();
     }
 
@@ -399,27 +536,172 @@
       if (mode === 'normal' || transitioning) return;
       transitioning = true;
       compactMode = !compactMode;
+      queueMode = false;
       var width = compactMode ? 440 : 336;
       var height = compactMode ? 58 : 336;
+      var minWidth = compactMode ? 340 : 240;
+      var minHeight = compactMode ? 45 : 240;
       appWin.hide()
-        .then(function () { return appWin.setMaxSize(null); })
-        .then(function () { return appWin.setMinSize(new T.window.LogicalSize(width, height)); })
+        .then(function () { return appWin.setMinSize(new T.window.LogicalSize(minWidth, minHeight)); })
         .then(function () { return appWin.setSize(new T.window.LogicalSize(width, height)); })
-        .then(function () { return appWin.setMaxSize(new T.window.LogicalSize(width, height)); })
         .then(function () {
-          document.getElementById('omc-mini-player').classList.toggle('omc-mini-compact', compactMode);
+          var player = document.getElementById('omc-mini-player');
+          player.classList.toggle('omc-mini-compact', compactMode);
+          player.classList.remove('omc-mini-queue-open');
           return finishTransition();
         }, function (error) {
           return finishTransition('[omc] failed to switch Mini layout', error);
         });
     }
 
+    function toggleQueue() {
+      if (mode === 'normal' || transitioning) return;
+      transitioning = true;
+      var wasCompact = compactMode;
+      queueMode = !queueMode;
+      compactMode = false;
+      if (queueMode && lyricMode) toggleLyrics();
+      var player = document.getElementById('omc-mini-player');
+      player.classList.remove('omc-mini-compact');
+      if (queueMode) {
+        player.classList.add('omc-mini-queue-open');
+      }
+      Promise.all([appWin.scaleFactor(), appWin.innerSize()]).then(function (state) {
+        var from = {
+          width: Math.round(state[1].width / state[0]),
+          height: Math.round(state[1].height / state[0])
+        };
+        if (queueMode) {
+          preQueueHeight = wasCompact ? Math.max(240, from.width) : from.height;
+        }
+        var target = {
+          width: from.width,
+          height: queueMode ? from.width + Math.max(150, Math.round(from.width * 0.48)) : preQueueHeight
+        };
+        var prepare = queueMode
+          ? Promise.resolve()
+          : appWin.setMinSize(new T.window.LogicalSize(240, 240));
+        return prepare.then(function () { return animateMiniSize(from, target, 135); }).then(function () {
+          if (queueMode) return appWin.setMinSize(new T.window.LogicalSize(240, from.width + 100));
+        });
+      }).then(function () {
+        if (!queueMode) player.classList.remove('omc-mini-queue-open');
+        transitioning = false;
+        if (queueMode) {
+          renderQueue(false);
+          requestAnimationFrame(function () {
+            var active = document.querySelector('#omc-mini-queue-list .active');
+            if (active) active.scrollIntoView({ block: 'center' });
+            updateQueueScrollbar();
+          });
+        }
+      }, function (error) {
+        console.error('[omc] failed to switch queue layout', error);
+        player.classList.toggle('omc-mini-queue-open', queueMode);
+        transitioning = false;
+      });
+    }
+
+    function animateMiniSize(from, target, duration) {
+      return new Promise(function (resolve, reject) {
+        var step = 0;
+        var steps = 5;
+        function frame() {
+          step += 1;
+          var progress = step / steps;
+          var eased = progress * progress * (3 - 2 * progress);
+          var width = Math.round(from.width + (target.width - from.width) * eased);
+          var height = Math.round(from.height + (target.height - from.height) * eased);
+          appWin.setSize(new T.window.LogicalSize(width, height)).then(function () {
+            if (step < steps) setTimeout(frame, duration / steps);
+            else resolve();
+          }).catch(reject);
+        }
+        frame();
+      });
+    }
+
+    function renderQueue(force, allowHidden) {
+      if (!queueMode && !allowHidden) return;
+      var queue = readPlayingQueue(window);
+      var key = queue.currentId + '|' + queue.items.map(function (item) { return item.id; }).join(',');
+      if (!force && key === queueRenderKey) return;
+      queueRenderKey = key;
+      var list = document.getElementById('omc-mini-queue-list');
+      if (!list) return;
+      list.innerHTML = '';
+      if (!queue.items.length) {
+        var empty = document.createElement('div');
+        empty.className = 'omc-mini-queue-row';
+        empty.textContent = '播放队列为空';
+        list.appendChild(empty);
+        updateQueueScrollbar();
+        return;
+      }
+      var fragment = document.createDocumentFragment();
+      queue.items.forEach(function (item) {
+        var row = document.createElement('div');
+        row.className = 'omc-mini-queue-row';
+        row.classList.toggle('active', item.id === queue.currentId);
+        row.innerHTML = '<span class="omc-mini-queue-title"></span><span class="omc-mini-queue-artist"></span>';
+        row.querySelector('.omc-mini-queue-title').textContent = item.title;
+        row.querySelector('.omc-mini-queue-artist').textContent = item.artist;
+        row.addEventListener('click', function () { playQueueItem(window, item.id); });
+        fragment.appendChild(row);
+      });
+      list.appendChild(fragment);
+      var active = list.querySelector('.active');
+      if (active) active.scrollIntoView({ block: 'center' });
+      requestAnimationFrame(updateQueueScrollbar);
+    }
+
+    function updateQueueScrollbar() {
+      var list = document.getElementById('omc-mini-queue-list');
+      var track = document.getElementById('omc-mini-queue-scrollbar');
+      var thumb = document.getElementById('omc-mini-queue-scroll-thumb');
+      if (!list || !track || !thumb) return;
+      var overflow = list.scrollHeight - list.clientHeight;
+      track.style.display = overflow > 0 ? 'block' : 'none';
+      if (overflow <= 0) return;
+      var height = Math.max(22, Math.round(track.clientHeight * list.clientHeight / list.scrollHeight));
+      var top = Math.round((track.clientHeight - height) * list.scrollTop / overflow);
+      thumb.style.height = height + 'px';
+      thumb.style.transform = 'translateY(' + top + 'px)';
+    }
+
+    function startQueueScrollbarDrag(event) {
+      event.preventDefault();
+      event.stopPropagation();
+      var list = document.getElementById('omc-mini-queue-list');
+      queueScrollDrag = { y: event.clientY, scrollTop: list.scrollTop };
+    }
+
+    function dragQueueScrollbar(event) {
+      if (!queueScrollDrag || !(event.buttons & 1)) return;
+      var list = document.getElementById('omc-mini-queue-list');
+      var track = document.getElementById('omc-mini-queue-scrollbar');
+      var thumb = document.getElementById('omc-mini-queue-scroll-thumb');
+      var travel = track.clientHeight - thumb.offsetHeight;
+      if (travel > 0) list.scrollTop = queueScrollDrag.scrollTop + (event.clientY - queueScrollDrag.y) * (list.scrollHeight - list.clientHeight) / travel;
+    }
+
+    function stopQueueScrollbarDrag() {
+      queueScrollDrag = null;
+    }
+
+    function jumpQueueScrollbar(event) {
+      if (event.target.id === 'omc-mini-queue-scroll-thumb') return;
+      var list = document.getElementById('omc-mini-queue-list');
+      var bounds = event.currentTarget.getBoundingClientRect();
+      list.scrollTop = (event.clientY - bounds.top) / bounds.height * (list.scrollHeight - list.clientHeight);
+    }
+
     function seek(event) {
       var audio = getAudio();
-      if (!audio || !isFinite(audio.duration) || !audio.duration) return;
       var bounds = event.currentTarget.getBoundingClientRect();
       var ratio = Math.max(0, Math.min(1, (event.clientX - bounds.left) / bounds.width));
-      audio.currentTime = ratio * audio.duration;
+      if (audio && isFinite(audio.duration) && audio.duration) audio.currentTime = ratio * audio.duration;
+      else seekInternalPlayback(window, ratio);
       updateTimeline();
     }
 
@@ -434,12 +716,14 @@
         .then(function (response) { return response.json(); })
         .then(function (result) {
           var source = result && result.lrc && result.lrc.lyric || '';
+          var offsetMatch = source.match(/\[offset:([+-]?\d+)\]/i);
+          var lyricOffset = offsetMatch ? Number(offsetMatch[1]) / 1000 : 0;
           source.split(/\r?\n/).forEach(function (line) {
             var text = line.replace(/\[(\d+):(\d+(?:\.\d+)?)\]/g, '').trim();
             var match;
             var times = /\[(\d+):(\d+(?:\.\d+)?)\]/g;
             while ((match = times.exec(line))) {
-              if (text) lyricLines.push({ time: Number(match[1]) * 60 + Number(match[2]), text: text });
+              if (text) lyricLines.push({ time: Number(match[1]) * 60 + Number(match[2]) - lyricOffset, text: text });
             }
           });
           lyricLines.sort(function (a, b) { return a.time - b.time; });
@@ -467,7 +751,16 @@
     function updateTimeline() {
       if (mode === 'normal') return;
       var audio = getAudio();
-      var ratio = audio && isFinite(audio.duration) && audio.duration ? audio.currentTime / audio.duration : 0;
+      var internal = readInternalPlaybackState(window, liveInternalProgress);
+      var useSyncedTimeline = syncedTimeline && Date.now() - syncedTimelineAt < 750;
+      var currentTime = internal && internal.currentTime != null
+        ? internal.currentTime
+        : (useSyncedTimeline ? syncedTimeline.currentTime : audio && audio.currentTime || 0);
+      var duration = internal && internal.duration
+        ? internal.duration
+        : (useSyncedTimeline ? syncedTimeline.duration : audio && audio.duration || 0);
+      var ratio = isFinite(duration) && duration ? Math.max(0, Math.min(1, currentTime / duration)) : 0;
+      if (internal && typeof internal.playing === 'boolean') updatePlayback(internal.playing, true);
       var fill = document.getElementById('omc-mini-progress-fill');
       var thumb = document.getElementById('omc-mini-progress-thumb');
       if (fill) fill.style.width = (ratio * 100) + '%';
@@ -477,11 +770,11 @@
       var like = document.getElementById('omc-mini-like');
       if (like && state && typeof state.liked === 'boolean') like.classList.toggle('liked', state.liked);
       if (state && state.trackId !== lyricTrackId) loadLyrics();
-      if (!lyricMode || !audio || !lyricLines.length) return;
+      renderQueue(false);
+      if (!lyricMode || !lyricLines.length) return;
 
       var index = -1;
-      for (var i = 0; i < lyricLines.length && lyricLines[i].time <= audio.currentTime; i++) index = i;
-      if (index === activeLyricIndex) return;
+      for (var i = 0; i < lyricLines.length && lyricLines[i].time <= currentTime; i++) index = i;
       activeLyricIndex = index;
       var list = document.getElementById('omc-mini-lyric-list');
       var viewport = document.getElementById('omc-mini-lyrics');
@@ -509,12 +802,12 @@
         };
         return appWin.hide()
           .then(function () { return state[3] ? appWin.unmaximize() : Promise.resolve(); })
-          .then(function () { return appWin.setMaxSize(null); })
-          .then(function () { return appWin.setMinSize(new T.window.LogicalSize(336, 336)); })
+          .then(function () { return appWin.setMinSize(new T.window.LogicalSize(240, 240)); })
           .then(function () { return appWin.setSize(new T.window.LogicalSize(336, 336)); })
-          .then(function () { return appWin.setMaxSize(new T.window.LogicalSize(336, 336)); })
           .then(function () { return appWin.setAlwaysOnTop(true); });
       }).then(function () {
+        alwaysOnTop = true;
+        document.getElementById('omc-mini-context-topmost').setAttribute('aria-checked', 'true');
         mode = 'expanded';
         document.documentElement.classList.add('omc-mini-active');
         loadLyrics();
@@ -531,13 +824,14 @@
       appWin.hide()
         .then(function () {
           document.documentElement.classList.remove('omc-mini-active');
-          document.getElementById('omc-mini-player').classList.remove('omc-mini-compact', 'omc-mini-lyrics');
+          document.getElementById('omc-mini-player').classList.remove('omc-mini-compact', 'omc-mini-lyrics', 'omc-mini-queue-open');
           compactMode = false;
           lyricMode = false;
+          queueMode = false;
+          alwaysOnTop = false;
           mode = 'normal';
           return appWin.setAlwaysOnTop(false);
         })
-        .then(function () { return appWin.setMaxSize(null); })
         .then(function () { return appWin.setMinSize(new T.window.LogicalSize(800, 600)); })
         .then(function () {
           if (!state) return;
@@ -568,10 +862,18 @@
       }
     }
 
-    function updatePlayback(playing) {
+    function updatePlayback(playing, bridged) {
+      if (bridged) bridgedPlaybackAt = Date.now();
+      else if (Date.now() - bridgedPlaybackAt < 750) return;
       lastPlaying = !!playing;
       var play = document.getElementById('omc-mini-play');
       if (play) play.setAttribute('data-playing', String(lastPlaying));
+    }
+
+    function syncTimeline(timeline) {
+      if (!timeline || !isFinite(timeline.currentTime) || !isFinite(timeline.duration)) return;
+      syncedTimeline = timeline;
+      syncedTimelineAt = Date.now();
     }
 
     if (document.documentElement) mount();
@@ -581,7 +883,8 @@
     return {
       enter: enter,
       updateMetadata: updateMetadata,
-      updatePlayback: updatePlayback
+      updatePlayback: updatePlayback,
+      updateTimeline: syncTimeline
     };
   }
 
@@ -843,8 +1146,7 @@
       if (!require) return null;
       var appModule = require(14);
       var app = appModule && appModule.a;
-      var store = app && app.getStore && app.getStore();
-      var state = store && store.getState();
+      var state = app && app.getStore && app.getStore();
       var rawTrackId = state && state.playing && state.playing.onlineResourceId;
       if (!/^[1-9]\d*$/.test(String(rawTrackId || ''))) return null;
       var trackId = String(rawTrackId);
@@ -857,6 +1159,117 @@
     } catch (error) {
       return null;
     }
+  }
+
+  function readInternalPlaybackState(targetWindow, progressSnapshot) {
+    try {
+      readInternalPlayerState(targetWindow);
+      var require = targetWindow.__omcWebpackRequire;
+      var app = require && require(14).a;
+      var state = app && app.getStore && app.getStore();
+      var playing = state && state.playing;
+      if (!playing) return null;
+      var currentTime = null;
+      var rawProgressMismatch = false;
+      try {
+        var rawProgress = progressSnapshot || require(167).b();
+        var progressId = String(rawProgress && rawProgress.playId || '');
+        var progressBaseId = progressId.split('_')[0];
+        var currentItem = playing.curPlaying || {};
+        var validIds = [
+          playing.playId,
+          playing.resourceTrackId,
+          playing.onlineResourceId,
+          currentItem.resourceId,
+          currentItem.trackId
+        ].filter(Boolean).map(function (id) { return String(id).split('_')[0]; });
+        rawProgressMismatch = !progressId || validIds.indexOf(progressBaseId) === -1;
+        if (!rawProgressMismatch) {
+          currentTime = Number(rawProgress.current);
+          var duration = Number(playing.resourceDuration) || 0;
+          if (duration && currentTime > duration + Math.max(30, duration * 0.1) && currentTime / 1000 <= duration + 2) {
+            currentTime /= 1000;
+          }
+          var trialStart = Number(playing.freeTrialInfo && playing.freeTrialInfo.start);
+          if (isFinite(trialStart)) currentTime += trialStart;
+        }
+      } catch (error) {}
+      if (!rawProgressMismatch && (currentTime == null || !isFinite(currentTime))) {
+        try {
+          var displayedTime = require(136).b;
+          if (displayedTime && typeof displayedTime.getValue === 'function') currentTime = Number(displayedTime.getValue());
+        } catch (error) {}
+      }
+      return {
+        currentTime: currentTime != null && isFinite(currentTime) ? currentTime : null,
+        duration: Number(playing.resourceDuration) || 0,
+        playing: Number(playing.playingState) === 2
+      };
+    } catch (error) {
+      return null;
+    }
+  }
+
+  function seekInternalPlayback(targetWindow, ratio) {
+    try {
+      readInternalPlayerState(targetWindow);
+      var require = targetWindow.__omcWebpackRequire;
+      var app = require && require(14).a;
+      var state = app && app.getStore && app.getStore();
+      var duration = Number(state && state.playing && state.playing.resourceDuration);
+      var dispatch = app && app.getDispatch && app.getDispatch();
+      if (!duration || !dispatch) return;
+      dispatch({ type: 'playing/setPlayingPosition', payload: { duration: duration * ratio } });
+    } catch (error) {}
+  }
+
+  function readPlayingQueue(targetWindow) {
+    try {
+      readInternalPlayerState(targetWindow);
+      var require = targetWindow.__omcWebpackRequire;
+      var app = require && require(14).a;
+      var state = app && app.getStore && app.getStore();
+      var items = state && state.playingList && state.playingList.curPlayingList || [];
+      var current = state && state.playing && state.playing.curPlaying;
+      var currentId = current && current.resourceId || state && state.playing && state.playing.onlineResourceId;
+      return {
+        currentId: currentId == null ? '' : String(currentId),
+        items: items.slice().sort(function (a, b) {
+          return Number(a.displayOrder || 0) - Number(b.displayOrder || 0);
+        }).map(function (item) {
+          var track = item.track || item.localTrack || {};
+          var artists = track.artists || [];
+          return {
+            id: String(item.resourceId || item.trackId || track.id || ''),
+            title: track.name || item.text || '未知歌曲',
+            artist: artists.map(function (artist) { return artist.name; }).filter(Boolean).join(' / '),
+            cover: track.coverUrl || track.album && track.album.picUrl || ''
+          };
+        })
+      };
+    } catch (error) {
+      return { currentId: '', items: [] };
+    }
+  }
+
+  function playQueueItem(targetWindow, trackId) {
+    try {
+      readInternalPlayerState(targetWindow);
+      var require = targetWindow.__omcWebpackRequire;
+      var app = require && require(14).a;
+      var state = app && app.getStore && app.getStore();
+      var items = state && state.playingList && state.playingList.curPlayingList || [];
+      var wanted = String(trackId);
+      var item = items.find(function (entry) {
+        return String(entry.resourceId || entry.trackId || entry.track && entry.track.id || '') === wanted;
+      });
+      var dispatch = app && app.getDispatch && app.getDispatch();
+      if (!item || !dispatch) return;
+      dispatch({
+        type: 'playing/playOneTrackInPlayingList',
+        payload: { item: item, flag: 0, switchType: 'call', triggerScene: 'playingList' }
+      });
+    } catch (error) {}
   }
 
   function setupTitlebarDragging(appWin) {
@@ -1037,12 +1450,16 @@
           ? !audio.paused && !audio.ended
           : state === 'playing' || (state === 'none' && domState && domState.playing);
         if (miniPlayer) miniPlayer.updatePlayback(playing);
+        var timeline = audio && isFinite(audio.currentTime) && isFinite(audio.duration) && audio.duration
+          ? { currentTime: audio.currentTime, duration: audio.duration }
+          : null;
+        if (miniPlayer && timeline) miniPlayer.updateTimeline(timeline);
 
         var metadataKey = metadata ? JSON.stringify(metadata) : '';
         var metadataChanged = !!metadata && metadataKey !== lastMetadata;
         var playingChanged = playing !== lastPlaying;
         var likedChanged = liked !== lastLiked;
-        if (relay && (metadataChanged || playingChanged)) relay(metadata, playing);
+        if (relay) relay(metadata, playing, timeline);
         if (invoke && metadataChanged) {
           invoke('update_media_metadata', {
             title: metadata.title,
