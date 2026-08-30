@@ -11,6 +11,7 @@
   var subscribeToInternalProgress = adapter.subscribeInternalProgress;
   function setupMiniPlayer(T, appWin) {
     var MINI_STATE_KEY = 'omc-mini-state';
+    var COMPACT_HEIGHT = 60;
     var mode = 'normal';
     var transitioning = false;
     var restoreState = null;
@@ -20,6 +21,11 @@
     var compactMode = false;
     var queueMode = false;
     var queueRenderKey = '';
+    var queueSnapshot = { currentId: '', items: [] };
+    var queueLastRefresh = 0;
+    var queueVisibleKey = '';
+    var QUEUE_ROW_HEIGHT = 34;
+    var QUEUE_OVERSCAN = 6;
     var preQueueHeight = 336;
     var miniDragCandidate = null;
     var queueScrollDrag = null;
@@ -33,6 +39,10 @@
     var lyricLines = [];
     var activeLyricIndex = -1;
     var saveStateTimer = null;
+    var compactLockedHeight = COMPACT_HEIGHT;
+    var compactResizeAdjusting = false;
+    var pendingCompactSize = null;
+    var coverAspectTimer = null;
 
     function readSavedMiniState() {
       try {
@@ -52,6 +62,21 @@
       if (mode === 'normal' || transitioning) return Promise.resolve();
       return Promise.all([appWin.scaleFactor(), appWin.innerSize(), appWin.innerPosition()]).then(function (values) {
         var scale = values[0];
+        var width = Math.round(values[1].width / scale);
+        var height = Math.round(values[1].height / scale);
+        var previous = readSavedMiniState() || {};
+        var layouts = previous.layouts || {};
+        var queueHeights = previous.queueHeights || {};
+        layouts[compactMode ? 'compact' : 'cover'] = {
+          width: width,
+          height: compactMode ? COMPACT_HEIGHT : width
+        };
+        if (queueMode) {
+          queueHeights[compactMode ? 'compact' : 'cover'] = Math.max(
+            100,
+            height - (compactMode ? COMPACT_HEIGHT : width)
+          );
+        }
         writeSavedMiniState({
           active: true,
           compact: compactMode,
@@ -59,10 +84,13 @@
           lyrics: lyricMode,
           preQueueHeight: preQueueHeight,
           alwaysOnTop: alwaysOnTop,
-          width: Math.round(values[1].width / scale),
-          height: Math.round(values[1].height / scale),
+          width: width,
+          height: height,
           x: Math.round(values[2].x / scale),
-          y: Math.round(values[2].y / scale)
+          y: Math.round(values[2].y / scale),
+          sharedWidth: width,
+          layouts: layouts,
+          queueHeights: queueHeights
         });
       }).catch(function () {});
     }
@@ -77,6 +105,69 @@
       var state = readSavedMiniState() || {};
       state.active = false;
       writeSavedMiniState(state);
+    }
+
+    function rememberQueueHeight(key, height) {
+      if (!isFinite(height) || height < 100) return;
+      var saved = readSavedMiniState() || {};
+      var queueHeights = saved.queueHeights || {};
+      queueHeights[key] = Math.round(height);
+      saved.queueHeights = queueHeights;
+      writeSavedMiniState(saved);
+    }
+
+    function lockCompactHeight(height) {
+      compactLockedHeight = height;
+      return appWin.setMinSize(new T.window.LogicalSize(240, 45));
+    }
+
+    function enforceCompactHeight(event) {
+      if (mode === 'normal' || transitioning || !compactMode) return;
+      var size = event && (event.payload || event);
+      if (!size || !isFinite(size.width) || !isFinite(size.height)) return;
+      pendingCompactSize = { width: size.width, height: size.height };
+      if (compactResizeAdjusting) return;
+      compactResizeAdjusting = true;
+
+      function applyLatestSize() {
+        var latest = pendingCompactSize;
+        pendingCompactSize = null;
+        appWin.scaleFactor().then(function (scale) {
+          var targetHeight = Math.round(compactLockedHeight * scale);
+          if (Math.abs(latest.height - targetHeight) <= 1) return;
+          return appWin.setSize(new T.window.PhysicalSize(latest.width, targetHeight));
+        }).catch(function () {}).then(function () {
+          if (pendingCompactSize) applyLatestSize();
+          else compactResizeAdjusting = false;
+        });
+      }
+
+      applyLatestSize();
+    }
+
+    function enforceCoverAspect(event) {
+      if (mode === 'normal' || transitioning || compactMode) return;
+      var size = event && (event.payload || event);
+      if (!size || !isFinite(size.width) || !isFinite(size.height)) return;
+      preQueueHeight = window.innerWidth;
+      clearTimeout(coverAspectTimer);
+      coverAspectTimer = setTimeout(function () {
+        if (mode === 'normal' || transitioning || compactMode) return;
+        Promise.all([appWin.scaleFactor(), appWin.innerSize()]).then(function (state) {
+          var width = Math.round(state[1].width / state[0]);
+          var height = Math.round(state[1].height / state[0]);
+          preQueueHeight = width;
+          if (queueMode) {
+            var minimumHeight = width + 100;
+            return appWin.setMinSize(new T.window.LogicalSize(240, minimumHeight)).then(function () {
+              if (height >= minimumHeight) return;
+              return appWin.setSize(new T.window.LogicalSize(width, minimumHeight));
+            });
+          }
+          if (Math.abs(height - width) <= 1) return;
+          return appWin.setSize(new T.window.LogicalSize(width, width));
+        }).catch(function () {});
+      }, 120);
     }
 
     function finishTransition(errorMessage, error) {
@@ -118,13 +209,18 @@
           '</div>' +
           '<div id="omc-mini-progress"><span id="omc-mini-progress-fill"></span><span id="omc-mini-progress-thumb"></span></div>' +
         '</footer>' +
-        '<section id="omc-mini-queue-view"><div id="omc-mini-queue-list"></div><div id="omc-mini-queue-scrollbar"><div id="omc-mini-queue-scroll-thumb" role="scrollbar" aria-label="播放队列滚动条"></div></div></section>' +
+        '<section id="omc-mini-queue-view"><div id="omc-mini-queue-list"><div id="omc-mini-queue-content"></div></div><div id="omc-mini-queue-scrollbar"><div id="omc-mini-queue-scroll-thumb" role="scrollbar" aria-label="播放队列滚动条"></div></div></section>' +
         '<div id="omc-mini-context" role="menu"><button class="omc-mini-context-item" id="omc-mini-context-restore" role="menuitem"><span class="omc-mini-context-check"></span><span>回到主界面</span></button><button class="omc-mini-context-item" id="omc-mini-context-topmost" role="menuitemcheckbox" aria-checked="true"><span class="omc-mini-context-check">✓</span><span>总在最前</span></button></div>';
       document.documentElement.appendChild(player);
 
       player.querySelectorAll('button').forEach(function (button) {
         button.addEventListener('pointerdown', function (e) { e.stopPropagation(); });
       });
+      player.addEventListener('dblclick', function (event) {
+        if (!event.target.closest('.omc-mini-toolbar')) return;
+        event.preventDefault();
+        event.stopImmediatePropagation();
+      }, true);
       document.getElementById('omc-mini-hide').addEventListener('click', function () { appWin.hide(); });
       document.getElementById('omc-mini-exit').addEventListener('click', exit);
       document.getElementById('omc-mini-prev').addEventListener('click', function () { performMediaAction('previoustrack'); });
@@ -135,7 +231,10 @@
       document.getElementById('omc-mini-like').addEventListener('click', function () { performMediaAction('like'); });
       document.getElementById('omc-mini-queue').addEventListener('click', toggleQueue);
       document.getElementById('omc-mini-more').addEventListener('click', toggleQueue);
-      document.getElementById('omc-mini-queue-list').addEventListener('scroll', updateQueueScrollbar);
+      document.getElementById('omc-mini-queue-list').addEventListener('scroll', function () {
+        renderVisibleQueue(false);
+        updateQueueScrollbar();
+      });
       document.getElementById('omc-mini-queue-scrollbar').addEventListener('pointerdown', jumpQueueScrollbar);
       document.getElementById('omc-mini-queue-scroll-thumb').addEventListener('pointerdown', startQueueScrollbarDrag);
       document.addEventListener('pointermove', dragQueueScrollbar);
@@ -166,8 +265,7 @@
       updateMetadata(lastMetadata);
       updatePlayback(lastPlaying);
       subscribeInternalProgress();
-      setTimeout(function () { renderQueue(false, true); }, 800);
-      setInterval(function () { if (!queueMode) renderQueue(false, true); }, 2000);
+      setTimeout(function () { renderQueue(true, true); }, 800);
     }
 
     function subscribeInternalProgress() {
@@ -189,7 +287,9 @@
     }
 
     function updateMiniHover(event) {
-      var coverHeight = queueMode ? Math.min(window.innerWidth, window.innerHeight) : window.innerHeight;
+      var coverHeight = queueMode
+        ? (compactMode ? COMPACT_HEIGHT : Math.min(window.innerWidth, window.innerHeight))
+        : window.innerHeight;
       event.currentTarget.classList.toggle('omc-mini-cover-hover', event.clientY >= 0 && event.clientY <= coverHeight);
     }
 
@@ -270,22 +370,50 @@
     function toggleCompact() {
       if (mode === 'normal' || transitioning) return;
       transitioning = true;
-      compactMode = !compactMode;
+      var nextCompactMode = !compactMode;
       queueMode = false;
-      var width = compactMode ? 440 : 336;
-      var height = compactMode ? 58 : 336;
-      var minWidth = compactMode ? 340 : 240;
-      var minHeight = compactMode ? 45 : 240;
-      appWin.hide()
-        .then(function () { return appWin.setMinSize(new T.window.LogicalSize(minWidth, minHeight)); })
-        .then(function () { return appWin.setSize(new T.window.LogicalSize(width, height)); })
-        .then(function () {
-          var player = document.getElementById('omc-mini-player');
-          player.classList.toggle('omc-mini-compact', compactMode);
-          player.classList.remove('omc-mini-queue-open');
-          return finishTransition();
-        }, function (error) {
-          return finishTransition('[omc] failed to switch Mini layout', error);
+      var player = document.getElementById('omc-mini-player');
+      player.classList.remove('omc-mini-queue-open');
+      if (nextCompactMode) player.classList.add('omc-mini-compacting');
+      if (!nextCompactMode) {
+        player.classList.add('omc-mini-expanding');
+        player.classList.remove('omc-mini-compact');
+        requestAnimationFrame(function () {
+          requestAnimationFrame(function () {
+            player.classList.add('omc-mini-expanding-active');
+          });
+        });
+      }
+      Promise.all([appWin.scaleFactor(), appWin.innerSize()]).then(function (state) {
+        var currentWidth = Math.round(state[1].width / state[0]);
+        var currentHeight = Math.round(state[1].height / state[0]);
+        var width = currentWidth;
+        var from = {
+          width: currentWidth,
+          height: currentHeight
+        };
+        var target = {
+          width: width,
+          height: nextCompactMode ? COMPACT_HEIGHT : width
+        };
+        return appWin.setMinSize(new T.window.LogicalSize(240, 45))
+          .then(function () { return animateMiniSize(from, target, 160, true); })
+          .then(function () {
+            compactMode = nextCompactMode;
+            player.classList.toggle('omc-mini-compact', compactMode);
+            player.classList.remove('omc-mini-compacting', 'omc-mini-expanding', 'omc-mini-expanding-active');
+            if (compactMode) return lockCompactHeight(COMPACT_HEIGHT);
+            return appWin.setMinSize(new T.window.LogicalSize(240, 240));
+          });
+      }).then(function () {
+        transitioning = false;
+        persistMiniState();
+      }, function (error) {
+        console.error('[omc] failed to switch Mini layout', error);
+        compactMode = nextCompactMode;
+        player.classList.toggle('omc-mini-compact', compactMode);
+        player.classList.remove('omc-mini-compacting', 'omc-mini-expanding', 'omc-mini-expanding-active');
+        transitioning = false;
         });
     }
 
@@ -293,13 +421,16 @@
       if (mode === 'normal' || transitioning) return;
       transitioning = true;
       var wasCompact = compactMode;
+      var wasQueueOpen = queueMode;
       queueMode = !queueMode;
-      compactMode = false;
       if (queueMode && lyricMode) toggleLyrics();
       var player = document.getElementById('omc-mini-player');
-      player.classList.remove('omc-mini-compact');
       if (queueMode) {
+        preQueueHeight = wasCompact ? COMPACT_HEIGHT : window.innerWidth;
+        player.style.setProperty('--omc-mini-cover-height', preQueueHeight + 'px');
         player.classList.add('omc-mini-queue-open');
+        if (queueSnapshot.items.length) queueLastRefresh = Date.now();
+        setTimeout(function () { renderQueue(false); }, 0);
       }
       Promise.all([appWin.scaleFactor(), appWin.innerSize()]).then(function (state) {
         var from = {
@@ -307,17 +438,27 @@
           height: Math.round(state[1].height / state[0])
         };
         if (queueMode) {
-          preQueueHeight = wasCompact ? Math.max(240, from.width) : from.height;
+          preQueueHeight = wasCompact ? COMPACT_HEIGHT : from.width;
+          player.style.setProperty('--omc-mini-cover-height', preQueueHeight + 'px');
+        } else if (wasQueueOpen) {
+          rememberQueueHeight(wasCompact ? 'compact' : 'cover', from.height - preQueueHeight);
         }
+        var contentHeight = wasCompact ? COMPACT_HEIGHT : from.width;
+        var saved = readSavedMiniState();
+        var savedQueueHeight = saved && saved.queueHeights && Number(saved.queueHeights[wasCompact ? 'compact' : 'cover']);
+        var queueHeight = savedQueueHeight || Math.max(150, Math.round(from.width * 0.48));
         var target = {
           width: from.width,
-          height: queueMode ? from.width + Math.max(150, Math.round(from.width * 0.48)) : preQueueHeight
+          height: queueMode ? contentHeight + queueHeight : contentHeight
         };
-        var prepare = queueMode
-          ? Promise.resolve()
-          : appWin.setMinSize(new T.window.LogicalSize(240, 240));
+        var prepare = compactMode
+          ? appWin.setMinSize(new T.window.LogicalSize(240, 45))
+          : (queueMode
+            ? Promise.resolve()
+            : appWin.setMinSize(new T.window.LogicalSize(240, 240)));
         return prepare.then(function () { return animateMiniSize(from, target, 135); }).then(function () {
-          if (queueMode) return appWin.setMinSize(new T.window.LogicalSize(240, from.width + 100));
+          if (compactMode) return lockCompactHeight(target.height);
+          if (queueMode) return appWin.setMinSize(new T.window.LogicalSize(240, contentHeight + 100));
         });
       }).then(function () {
         if (!queueMode) player.classList.remove('omc-mini-queue-open');
@@ -325,10 +466,11 @@
         if (queueMode) {
           renderQueue(false);
           requestAnimationFrame(function () {
-            var active = document.querySelector('#omc-mini-queue-list .active');
-            if (active) active.scrollIntoView({ block: 'center' });
+            centerCurrentQueueItem();
+            renderVisibleQueue(true);
             updateQueueScrollbar();
           });
+          setTimeout(function () { if (queueMode) renderQueue(true); }, 200);
         }
         persistMiniState();
       }, function (error) {
@@ -338,7 +480,14 @@
       });
     }
 
-    function animateMiniSize(from, target, duration) {
+    function animateMiniSize(from, target, duration, anchorBottom) {
+      if (anchorBottom) {
+        return T.core.invoke('animate_window_size_anchored_bottom', {
+          width: target.width,
+          height: target.height,
+          duration: duration
+        });
+      }
       return new Promise(function (resolve, reject) {
         var step = 0;
         var steps = 5;
@@ -348,7 +497,8 @@
           var eased = progress * progress * (3 - 2 * progress);
           var width = Math.round(from.width + (target.width - from.width) * eased);
           var height = Math.round(from.height + (target.height - from.height) * eased);
-          appWin.setSize(new T.window.LogicalSize(width, height)).then(function () {
+          var resize = appWin.setSize(new T.window.LogicalSize(width, height));
+          resize.then(function () {
             if (step < steps) setTimeout(frame, duration / steps);
             else resolve();
           }).catch(reject);
@@ -359,36 +509,73 @@
 
     function renderQueue(force, allowHidden) {
       if (!queueMode && !allowHidden) return;
-      var queue = readPlayingQueue(window);
-      var key = queue.currentId + '|' + queue.items.map(function (item) { return item.id; }).join(',');
-      if (!force && key === queueRenderKey) return;
-      queueRenderKey = key;
-      var list = document.getElementById('omc-mini-queue-list');
-      if (!list) return;
-      list.innerHTML = '';
-      if (!queue.items.length) {
-        var empty = document.createElement('div');
-        empty.className = 'omc-mini-queue-row';
-        empty.textContent = '播放队列为空';
-        list.appendChild(empty);
-        updateQueueScrollbar();
+      if (!force && queueSnapshot.items.length && Date.now() - queueLastRefresh < 1000) {
+        if (queueMode) renderVisibleQueue(false);
         return;
       }
+      var previousCurrentId = queueSnapshot.currentId;
+      var queue = readPlayingQueue(window);
+      var key = queue.currentId + '|' + queue.items.map(function (item) { return item.id; }).join(',');
+      queueLastRefresh = Date.now();
+      queueSnapshot = queue;
+      var changed = key !== queueRenderKey;
+      queueRenderKey = key;
+      var list = document.getElementById('omc-mini-queue-list');
+      var content = document.getElementById('omc-mini-queue-content');
+      if (!list || !content) return;
+      content.style.height = Math.max(queue.items.length * QUEUE_ROW_HEIGHT, list.clientHeight) + 'px';
+      if (changed) queueVisibleKey = '';
+      if (!queueMode) return;
+      if (force || previousCurrentId !== queue.currentId) centerCurrentQueueItem();
+      renderVisibleQueue(changed || force);
+      requestAnimationFrame(updateQueueScrollbar);
+    }
+
+    function centerCurrentQueueItem() {
+      var list = document.getElementById('omc-mini-queue-list');
+      if (!list || !queueSnapshot.items.length) return;
+      var index = queueSnapshot.items.findIndex(function (item) { return item.id === queueSnapshot.currentId; });
+      if (index < 0) return;
+      list.scrollTop = Math.max(0, index * QUEUE_ROW_HEIGHT - (list.clientHeight - QUEUE_ROW_HEIGHT) / 2);
+    }
+
+    function renderVisibleQueue(force) {
+      var list = document.getElementById('omc-mini-queue-list');
+      var content = document.getElementById('omc-mini-queue-content');
+      if (!list || !content || !queueMode || !list.clientHeight) return;
+      if (!queueSnapshot.items.length) {
+        if (queueVisibleKey === 'empty' && !force) return;
+        queueVisibleKey = 'empty';
+        content.innerHTML = '<div class="omc-mini-queue-row">播放队列为空</div>';
+        return;
+      }
+      var start = Math.max(0, Math.floor(list.scrollTop / QUEUE_ROW_HEIGHT) - QUEUE_OVERSCAN);
+      var end = Math.min(
+        queueSnapshot.items.length,
+        Math.ceil((list.scrollTop + list.clientHeight) / QUEUE_ROW_HEIGHT) + QUEUE_OVERSCAN
+      );
+      var visibleKey = queueRenderKey + '|' + start + ':' + end;
+      if (!force && visibleKey === queueVisibleKey) return;
+      queueVisibleKey = visibleKey;
+      content.innerHTML = '';
       var fragment = document.createDocumentFragment();
-      queue.items.forEach(function (item) {
+      for (var index = start; index < end; index++) {
+        var item = queueSnapshot.items[index];
         var row = document.createElement('div');
         row.className = 'omc-mini-queue-row';
-        row.classList.toggle('active', item.id === queue.currentId);
+        row.classList.toggle('odd', index % 2 === 0);
+        row.classList.toggle('active', item.id === queueSnapshot.currentId);
+        row.style.top = (index * QUEUE_ROW_HEIGHT) + 'px';
         row.innerHTML = '<span class="omc-mini-queue-title"></span><span class="omc-mini-queue-artist"></span>';
         row.querySelector('.omc-mini-queue-title').textContent = item.title;
         row.querySelector('.omc-mini-queue-artist').textContent = item.artist;
-        row.addEventListener('click', function () { playQueueItem(window, item.id); });
+        row.setAttribute('data-track-id', item.id);
+        row.addEventListener('click', function (event) {
+          playQueueItem(window, event.currentTarget.getAttribute('data-track-id'));
+        });
         fragment.appendChild(row);
-      });
-      list.appendChild(fragment);
-      var active = list.querySelector('.active');
-      if (active) active.scrollIntoView({ block: 'center' });
-      requestAnimationFrame(updateQueueScrollbar);
+      }
+      content.appendChild(fragment);
     }
 
     function updateQueueScrollbar() {
@@ -528,6 +715,10 @@
     function enter() {
       if (mode !== 'normal' || transitioning) return;
       transitioning = true;
+      var saved = readSavedMiniState() || {};
+      var coverLayout = saved.layouts && saved.layouts.cover;
+      var miniWidth = Number(saved.sharedWidth) || Number(saved.width) || Number(coverLayout && coverLayout.width) || 336;
+      var miniHeight = miniWidth;
       Promise.all([appWin.scaleFactor(), appWin.innerSize(), appWin.innerPosition(), appWin.isMaximized()]).then(function (state) {
         restoreState = {
           width: Math.round(state[1].width / state[0]),
@@ -538,12 +729,21 @@
         };
         return appWin.hide()
           .then(function () { return state[3] ? appWin.unmaximize() : Promise.resolve(); })
+          .then(function () { return appWin.setMaximizable(false); })
           .then(function () { return appWin.setMinSize(new T.window.LogicalSize(240, 240)); })
-          .then(function () { return appWin.setSize(new T.window.LogicalSize(336, 336)); })
-          .then(function () { return appWin.setAlwaysOnTop(true); });
+          .then(function () { return appWin.setSize(new T.window.LogicalSize(miniWidth, miniHeight)); })
+          .then(function () {
+            if (!isFinite(saved.x) || !isFinite(saved.y)) return;
+            return appWin.setPosition(new T.window.LogicalPosition(Number(saved.x), Number(saved.y)));
+          })
+          .then(function () { return appWin.setAlwaysOnTop(saved.alwaysOnTop !== false); });
       }).then(function () {
-        alwaysOnTop = true;
-        document.getElementById('omc-mini-context-topmost').setAttribute('aria-checked', 'true');
+        compactMode = false;
+        queueMode = false;
+        lyricMode = false;
+        alwaysOnTop = saved.alwaysOnTop !== false;
+        document.getElementById('omc-mini-player').classList.remove('omc-mini-compact', 'omc-mini-lyrics', 'omc-mini-queue-open');
+        document.getElementById('omc-mini-context-topmost').setAttribute('aria-checked', String(alwaysOnTop));
         mode = 'expanded';
         document.documentElement.classList.add('omc-mini-active');
         loadLyrics();
@@ -569,6 +769,7 @@
           markMiniInactive();
           return appWin.setAlwaysOnTop(false);
         })
+        .then(function () { return appWin.setMaximizable(true); })
         .then(function () { return appWin.setMinSize(new T.window.LogicalSize(800, 600)); })
         .then(function () {
           if (!state) return;
@@ -596,6 +797,7 @@
       if (artwork) {
         cover.src = artwork;
         thumb.src = artwork;
+        document.documentElement.style.setProperty('--omc-mini-cover', 'url(' + JSON.stringify(artwork) + ')');
       }
     }
 
@@ -642,25 +844,31 @@
           maximized: state[3]
         };
         compactMode = !!saved.compact;
-        queueMode = !compactMode && !!saved.queue;
+        queueMode = !!saved.queue;
         lyricMode = !compactMode && !!saved.lyrics;
-        preQueueHeight = Number(saved.preQueueHeight) || 336;
         alwaysOnTop = saved.alwaysOnTop !== false;
-        var width = Number(saved.width) || (compactMode ? 440 : 336);
-        var height = Number(saved.height) || (compactMode ? 58 : (queueMode ? 497 : 336));
-        var minWidth = compactMode ? 340 : 240;
-        var minHeight = compactMode ? 45 : 240;
+        var width = Number(saved.sharedWidth) || Number(saved.width) || (compactMode ? 440 : 336);
+        preQueueHeight = compactMode ? COMPACT_HEIGHT : width;
+        var savedQueueHeight = Number(saved.queueHeights && saved.queueHeights[compactMode ? 'compact' : 'cover']);
+        var height = compactMode
+          ? (queueMode ? (Number(saved.height) || 269) : COMPACT_HEIGHT)
+          : (queueMode ? width + (savedQueueHeight || Math.max(150, Math.round(width * 0.48))) : width);
+        var minWidth = 240;
+        var minHeight = compactMode ? 45 : (queueMode ? width + 100 : 240);
         return appWin.hide()
           .then(function () { return state[3] ? appWin.unmaximize() : Promise.resolve(); })
+          .then(function () { return appWin.setMaximizable(false); })
           .then(function () { return appWin.setMinSize(new T.window.LogicalSize(minWidth, minHeight)); })
           .then(function () { return appWin.setSize(new T.window.LogicalSize(width, height)); })
           .then(function () {
             if (!isFinite(saved.x) || !isFinite(saved.y)) return;
             return appWin.setPosition(new T.window.LogicalPosition(Number(saved.x), Number(saved.y)));
           })
-          .then(function () { return appWin.setAlwaysOnTop(alwaysOnTop); });
+          .then(function () { return appWin.setAlwaysOnTop(alwaysOnTop); })
+          .then(function () { if (compactMode) return lockCompactHeight(height); });
       }).then(function () {
         var player = document.getElementById('omc-mini-player');
+        player.style.setProperty('--omc-mini-cover-height', (compactMode ? COMPACT_HEIGHT : preQueueHeight) + 'px');
         player.classList.toggle('omc-mini-compact', compactMode);
         player.classList.toggle('omc-mini-queue-open', queueMode);
         player.classList.toggle('omc-mini-lyrics', lyricMode);
@@ -687,6 +895,8 @@
     setInterval(updateTimeline, 250);
     appWin.onMoved(scheduleMiniStateSave);
     appWin.onResized(scheduleMiniStateSave);
+    appWin.onResized(enforceCompactHeight);
+    appWin.onResized(enforceCoverAspect);
 
     return {
       enter: enter,
