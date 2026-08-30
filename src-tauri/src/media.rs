@@ -9,7 +9,7 @@ pub struct MediaMetadata {
     pub cover_url: String,
 }
 
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone, Default, Serialize)]
 pub struct MediaState {
     pub playing: bool,
     pub metadata: Option<MediaMetadata>,

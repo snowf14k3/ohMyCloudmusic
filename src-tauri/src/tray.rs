@@ -1,10 +1,18 @@
+#[cfg(target_os = "linux")]
+use tauri::menu::{MenuBuilder, MenuItemBuilder, PredefinedMenuItem};
+#[cfg(not(target_os = "linux"))]
+use tauri::webview::WebviewWindowBuilder;
 use tauri::{
-    menu::{MenuBuilder, MenuItemBuilder, PredefinedMenuItem},
     tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent},
     AppHandle, Emitter, Manager,
 };
 
-use crate::media::MediaStore;
+use crate::media::{MediaState, MediaStore};
+
+#[cfg(not(target_os = "linux"))]
+const POPUP_WIDTH: f64 = 236.0;
+#[cfg(not(target_os = "linux"))]
+const POPUP_HEIGHT: f64 = 226.0;
 
 pub fn create_tray(app: &AppHandle) -> tauri::Result<()> {
     let icon = app
@@ -12,23 +20,36 @@ pub fn create_tray(app: &AppHandle) -> tauri::Result<()> {
         .cloned()
         .expect("missing default window icon");
 
-    let menu = build_tray_menu(app, None, false)?;
+    #[cfg(not(target_os = "linux"))]
+    create_tray_menu_window(app)?;
 
-    let _tray = TrayIconBuilder::with_id("main")
+    let tray = TrayIconBuilder::with_id("main")
         .icon(icon)
-        .menu(&menu)
-        .tooltip("ohMyCloudmusic")
-        .on_menu_event(move |app, event| {
-            handle_menu_event(app, event.id().as_ref());
+        .tooltip("ohMyCloudmusic");
+
+    #[cfg(target_os = "linux")]
+    let tray = {
+        let menu = build_native_menu(app, None, false)?;
+        tray.menu(&menu).on_menu_event(move |app, event| {
+            handle_action(app, event.id().as_ref());
         })
+    };
+
+    let _tray = tray
         .on_tray_icon_event(|tray, event| {
             if let TrayIconEvent::Click {
-                button: MouseButton::Left,
+                position,
+                button,
                 button_state: MouseButtonState::Up,
                 ..
             } = event
             {
-                toggle_window(tray.app_handle());
+                match button {
+                    MouseButton::Left => toggle_window(tray.app_handle()),
+                    #[cfg(not(target_os = "linux"))]
+                    MouseButton::Right => toggle_tray_menu(tray.app_handle(), position),
+                    _ => {}
+                }
             }
         })
         .build(app)?;
@@ -36,110 +57,189 @@ pub fn create_tray(app: &AppHandle) -> tauri::Result<()> {
     Ok(())
 }
 
-/// Rebuild the tray menu with current media state
 pub fn update_tray(app: &AppHandle) {
-    let store = app.state::<MediaStore>();
-    let state = store.0.lock().unwrap().clone();
+    let state = current_state(app);
 
     if let Some(tray) = app.tray_by_id("main") {
-        if let Ok(menu) = build_tray_menu(app, state.metadata.as_ref(), state.playing) {
+        #[cfg(target_os = "linux")]
+        if let Ok(menu) = build_native_menu(app, state.metadata.as_ref(), state.playing) {
             let _ = tray.set_menu(Some(menu));
+        }
 
-            // Update tooltip with current track
-            let tooltip = match &state.metadata {
-                Some(m) if !m.title.is_empty() => {
-                    format!("{} - {} | ohMyCloudmusic", m.title, m.artist)
-                }
-                _ => "ohMyCloudmusic".to_string(),
-            };
-            let _ = tray.set_tooltip(Some(&tooltip));
+        let tooltip = match &state.metadata {
+            Some(metadata) if !metadata.title.is_empty() => {
+                format!("{} - {} | ohMyCloudmusic", metadata.title, metadata.artist)
+            }
+            _ => "ohMyCloudmusic".to_string(),
+        };
+        let _ = tray.set_tooltip(Some(&tooltip));
+    }
+
+    #[cfg(not(target_os = "linux"))]
+    if let Some(window) = app.get_webview_window("tray-menu") {
+        let _ = window.emit("tray-state", state);
+    }
+}
+
+#[tauri::command]
+pub fn get_tray_state(app: AppHandle) -> MediaState {
+    current_state(&app)
+}
+
+#[tauri::command]
+pub fn tray_action(app: AppHandle, action: String) {
+    handle_action(&app, &action);
+    if action == "show" {
+        if let Some(window) = app.get_webview_window("tray-menu") {
+            let _ = window.hide();
         }
     }
 }
 
-fn build_tray_menu(
-    app: &AppHandle,
-    metadata: Option<&crate::media::MediaMetadata>,
-    playing: bool,
-) -> tauri::Result<tauri::menu::Menu<tauri::Wry>> {
-    let mut builder = MenuBuilder::new(app);
-
-    // Show current track info if available
-    if let Some(meta) = metadata {
-        if !meta.title.is_empty() {
-            let track_info = if meta.artist.is_empty() {
-                meta.title.clone()
-            } else {
-                format!("{} - {}", meta.title, meta.artist)
-            };
-            // Truncate long titles (char-safe for CJK)
-            let display: String = if track_info.chars().count() > 30 {
-                let truncated: String = track_info.chars().take(27).collect();
-                format!("{}...", truncated)
-            } else {
-                track_info
-            };
-            let track_item = MenuItemBuilder::with_id("track_info", &display)
-                .enabled(false)
-                .build(app)?;
-            builder = builder.item(&track_item);
-            builder = builder.item(&PredefinedMenuItem::separator(app)?);
-        }
-    }
-
-    // Play/Pause toggle
-    let play_label = if playing { "暂停" } else { "播放" };
-    let play_pause = MenuItemBuilder::with_id("play_pause", play_label).build(app)?;
-    let previous = MenuItemBuilder::with_id("previous", "上一首").build(app)?;
-    let next = MenuItemBuilder::with_id("next", "下一首").build(app)?;
-
-    builder = builder
-        .item(&play_pause)
-        .item(&previous)
-        .item(&next)
-        .item(&PredefinedMenuItem::separator(app)?);
-
-    // Window & app controls
-    let show = MenuItemBuilder::with_id("show", "显示/隐藏窗口").build(app)?;
-    let login = MenuItemBuilder::with_id("login", "登录").build(app)?;
-    let quit = MenuItemBuilder::with_id("quit", "退出").build(app)?;
-
-    builder = builder
-        .item(&show)
-        .item(&login)
-        .item(&PredefinedMenuItem::separator(app)?)
-        .item(&quit);
-
-    builder.build()
+fn current_state(app: &AppHandle) -> MediaState {
+    app.state::<MediaStore>().0.lock().unwrap().clone()
 }
 
-fn handle_menu_event(app: &AppHandle, id: &str) {
-    match id {
+fn handle_action(app: &AppHandle, action: &str) {
+    match action {
         "show" => toggle_window(app),
         "play_pause" => emit_media(app, "play"),
         "previous" => emit_media(app, "previoustrack"),
         "next" => emit_media(app, "nexttrack"),
-        "login" => {
-            crate::login::open_login_window(app);
-        }
+        "like" => emit_media(app, "like"),
         "quit" => app.exit(0),
         _ => {}
     }
 }
 
 fn toggle_window(app: &AppHandle) {
-    if let Some(win) = app.get_webview_window("main") {
-        if win.is_visible().unwrap_or(false) {
-            let _ = win.hide();
+    if let Some(window) = app.get_webview_window("main") {
+        if window.is_visible().unwrap_or(false) {
+            let _ = window.hide();
         } else {
-            let _ = win.show();
-            let _ = win.set_focus();
+            let _ = window.show();
+            let _ = window.set_focus();
         }
     }
 }
 
 fn emit_media(app: &AppHandle, action: &str) {
-    if let Some(win) = app.get_webview_window("main") {
-        let _ = win.emit("media-control", action);
+    if let Some(window) = app.get_webview_window("main") {
+        let _ = window.emit("media-control", action);
     }
+}
+
+#[cfg(not(target_os = "linux"))]
+fn create_tray_menu_window(app: &AppHandle) -> tauri::Result<()> {
+    if app.get_webview_window("tray-menu").is_some() {
+        return Ok(());
+    }
+
+    let window =
+        WebviewWindowBuilder::new(app, "tray-menu", tauri::WebviewUrl::App("tray.html".into()))
+            .title("ohMyCloudmusic")
+            .inner_size(POPUP_WIDTH, POPUP_HEIGHT)
+            .resizable(false)
+            .decorations(false)
+            .transparent(true)
+            .shadow(false)
+            .always_on_top(true)
+            .skip_taskbar(true)
+            .visible(false)
+            .build()?;
+
+    let blur_window = window.clone();
+    window.on_window_event(move |event| {
+        if matches!(event, tauri::WindowEvent::Focused(false)) {
+            let _ = blur_window.hide();
+        }
+    });
+
+    Ok(())
+}
+
+#[cfg(not(target_os = "linux"))]
+fn toggle_tray_menu(app: &AppHandle, cursor: tauri::PhysicalPosition<f64>) {
+    let Some(window) = app.get_webview_window("tray-menu") else {
+        return;
+    };
+
+    if window.is_visible().unwrap_or(false) {
+        let _ = window.hide();
+        return;
+    }
+
+    let scale = window.scale_factor().unwrap_or(1.0);
+    let popup_width = (POPUP_WIDTH * scale).round() as i32;
+    let popup_height = (POPUP_HEIGHT * scale).round() as i32;
+    let cursor_x = cursor.x.round() as i32;
+    let cursor_y = cursor.y.round() as i32;
+    let mut x = cursor_x - popup_width + (20.0 * scale).round() as i32;
+    let mut y = cursor_y - popup_height - (8.0 * scale).round() as i32;
+
+    if let Ok(Some(monitor)) = app.monitor_from_point(cursor.x, cursor.y) {
+        let work = monitor.work_area();
+        let left = work.position.x + 8;
+        let top = work.position.y + 8;
+        let right = work.position.x + work.size.width as i32 - 8;
+        let bottom = work.position.y + work.size.height as i32 - 8;
+
+        x = x.clamp(left, (right - popup_width).max(left));
+        if y < top {
+            y = cursor_y + (8.0 * scale).round() as i32;
+        }
+        y = y.clamp(top, (bottom - popup_height).max(top));
+    }
+
+    let _ = window.set_position(tauri::PhysicalPosition::new(x, y));
+    let _ = window.emit("tray-state", current_state(app));
+    let _ = window.show();
+    let _ = window.set_focus();
+}
+
+#[cfg(target_os = "linux")]
+fn build_native_menu(
+    app: &AppHandle,
+    metadata: Option<&crate::media::MediaMetadata>,
+    playing: bool,
+) -> tauri::Result<tauri::menu::Menu<tauri::Wry>> {
+    let track_info = metadata
+        .filter(|metadata| !metadata.title.is_empty())
+        .map(|metadata| {
+            if metadata.artist.is_empty() {
+                metadata.title.clone()
+            } else {
+                format!("{} - {}", metadata.title, metadata.artist)
+            }
+        })
+        .unwrap_or_else(|| "ohMyCloudmusic".to_string());
+    let display = if track_info.chars().count() > 28 {
+        format!("{}...", track_info.chars().take(25).collect::<String>())
+    } else {
+        track_info
+    };
+
+    let track = MenuItemBuilder::with_id("track_info", display)
+        .enabled(false)
+        .build(app)?;
+    let previous = MenuItemBuilder::with_id("previous", "上一首").build(app)?;
+    let play_pause =
+        MenuItemBuilder::with_id("play_pause", if playing { "暂停" } else { "播放" }).build(app)?;
+    let next = MenuItemBuilder::with_id("next", "下一首").build(app)?;
+    let like = MenuItemBuilder::with_id("like", "喜欢当前歌曲").build(app)?;
+    let show = MenuItemBuilder::with_id("show", "显示 / 隐藏主窗口").build(app)?;
+    let quit = MenuItemBuilder::with_id("quit", "退出 ohMyCloudmusic").build(app)?;
+
+    MenuBuilder::new(app)
+        .item(&track)
+        .item(&PredefinedMenuItem::separator(app)?)
+        .item(&previous)
+        .item(&play_pause)
+        .item(&next)
+        .item(&like)
+        .item(&PredefinedMenuItem::separator(app)?)
+        .item(&show)
+        .item(&PredefinedMenuItem::separator(app)?)
+        .item(&quit)
+        .build()
 }

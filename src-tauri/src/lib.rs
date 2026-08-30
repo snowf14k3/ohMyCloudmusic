@@ -125,6 +125,8 @@ pub fn run() {
             on_login_success,
             qr_generate,
             qr_check,
+            tray::get_tray_state,
+            tray::tray_action,
         ])
         .setup(|app| {
             let navigation_app = app.handle().clone();

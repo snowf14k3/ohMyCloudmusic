@@ -1,0 +1,212 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>ohMyCloudmusic</title>
+  <style>
+    :root {
+      color-scheme: light;
+      font-family: "Microsoft YaHei UI", "PingFang SC", "Noto Sans CJK SC", sans-serif;
+      background: transparent;
+      color: #596273;
+    }
+    * { box-sizing: border-box; }
+    html, body { width: 100%; height: 100%; margin: 0; overflow: hidden; background: transparent; }
+    body { padding: 8px; user-select: none; }
+    .menu {
+      width: 100%;
+      height: 100%;
+      padding: 7px 8px;
+      overflow: hidden;
+      border: 1px solid rgba(84, 92, 108, .13);
+      border-radius: 12px;
+      background: rgba(253, 252, 250, .985);
+      box-shadow: 0 12px 34px rgba(27, 31, 40, .19), 0 2px 7px rgba(27, 31, 40, .09);
+    }
+    .track {
+      height: 43px;
+      padding: 0 9px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      min-width: 0;
+    }
+    .track-mark {
+      width: 24px;
+      height: 24px;
+      display: grid;
+      place-items: center;
+      flex: 0 0 auto;
+      border-radius: 8px;
+      background: #f3f0ed;
+      color: #737d8d;
+    }
+    .track-copy { min-width: 0; line-height: 1.25; }
+    .track-title {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      color: #555f70;
+      font-size: 12px;
+      font-weight: 500;
+      letter-spacing: .01em;
+    }
+    .track-artist {
+      margin-top: 2px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      color: #9aa1ac;
+      font-size: 10px;
+    }
+    .divider { height: 1px; margin: 0 7px; background: #ece9e6; }
+    .transport {
+      height: 54px;
+      padding: 0 5px;
+      display: flex;
+      align-items: center;
+      justify-content: space-around;
+    }
+    button {
+      appearance: none;
+      border: 0;
+      font: inherit;
+      color: inherit;
+      cursor: default;
+      outline: none;
+    }
+    .transport-button {
+      width: 40px;
+      height: 40px;
+      padding: 0;
+      display: grid;
+      place-items: center;
+      border-radius: 50%;
+      background: transparent;
+      color: #747d8c;
+      transition: color .13s ease, background-color .13s ease, transform .1s ease;
+    }
+    .transport-button:hover { color: #343b47; background: #f1efec; }
+    .transport-button:active { transform: scale(.88); }
+    .transport-button.heart:hover { color: #ec4141; background: #fff0ef; }
+    .transport-button.heart:active .heart-icon { fill: currentColor; }
+    .pause-icon { display: none; }
+    .playing .play-icon { display: none; }
+    .playing .pause-icon { display: block; }
+    .menu-button {
+      width: 100%;
+      height: 42px;
+      padding: 0 10px;
+      display: flex;
+      align-items: center;
+      gap: 11px;
+      border-radius: 8px;
+      background: transparent;
+      color: #626c7c;
+      font-size: 12px;
+      text-align: left;
+      transition: color .13s ease, background-color .13s ease;
+    }
+    .menu-button svg { flex: 0 0 auto; color: #7d8796; }
+    .menu-button:hover { color: #303744; background: #f0eeeb; }
+    .menu-button:hover svg { color: #596273; }
+    .menu-button.danger:hover { color: #d93c3c; background: #fff0ef; }
+    .menu-button.danger:hover svg { color: #d93c3c; }
+    button:focus-visible { box-shadow: inset 0 0 0 1px rgba(236, 65, 65, .55); }
+    svg { display: block; }
+  </style>
+</head>
+<body>
+  <main class="menu" aria-label="ohMyCloudmusic 托盘菜单">
+    <section class="track" aria-live="polite">
+      <span class="track-mark" aria-hidden="true">
+        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M9 18V5l9-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="15" cy="16" r="3"/>
+        </svg>
+      </span>
+      <span class="track-copy">
+        <span class="track-title" id="track-title">ohMyCloudmusic</span>
+        <span class="track-artist" id="track-artist">等待播放</span>
+      </span>
+    </section>
+
+    <div class="divider"></div>
+
+    <section class="transport" aria-label="播放控制">
+      <button class="transport-button" data-action="previous" title="上一首" aria-label="上一首">
+        <svg viewBox="0 0 24 24" width="19" height="19" fill="currentColor"><path d="M5 5h2v14H5zm3.5 7L19 5.7v12.6z"/></svg>
+      </button>
+      <button class="transport-button play" id="play-pause" data-action="play_pause" title="播放" aria-label="播放">
+        <svg class="play-icon" viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M8 5.5v13l10-6.5z"/></svg>
+        <svg class="pause-icon" viewBox="0 0 24 24" width="19" height="19" fill="currentColor"><path d="M7 5h3.5v14H7zm6.5 0H17v14h-3.5z"/></svg>
+      </button>
+      <button class="transport-button" data-action="next" title="下一首" aria-label="下一首">
+        <svg viewBox="0 0 24 24" width="19" height="19" fill="currentColor"><path d="M17 5h2v14h-2zm-12 0 10.5 7L5 19z"/></svg>
+      </button>
+      <button class="transport-button heart" data-action="like" title="喜欢当前歌曲" aria-label="喜欢当前歌曲">
+        <svg class="heart-icon" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M20.8 5.9a5.4 5.4 0 0 0-7.7 0L12 7l-1.1-1.1a5.4 5.4 0 0 0-7.7 7.7L12 22l8.8-8.4a5.4 5.4 0 0 0 0-7.7z"/></svg>
+      </button>
+    </section>
+
+    <div class="divider"></div>
+
+    <button class="menu-button" data-action="show">
+      <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <rect x="3.5" y="4.5" width="17" height="13" rx="2"/><path d="M8.5 21h7M12 17.5V21"/>
+      </svg>
+      <span>显示 / 隐藏主窗口</span>
+    </button>
+
+    <div class="divider"></div>
+
+    <button class="menu-button danger" data-action="quit">
+      <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true">
+        <path d="M12 3v8"/><path d="M7.2 5.8a8 8 0 1 0 9.6 0"/>
+      </svg>
+      <span>退出 ohMyCloudmusic</span>
+    </button>
+  </main>
+
+  <script>
+    (function () {
+      'use strict';
+      var T = window.__TAURI__;
+      var invoke = T.core.invoke;
+      var listen = T.event.listen;
+      var appWindow = T.window.getCurrentWindow();
+      var title = document.getElementById('track-title');
+      var artist = document.getElementById('track-artist');
+      var playPause = document.getElementById('play-pause');
+
+      function render(state) {
+        var metadata = state && state.metadata;
+        title.textContent = metadata && metadata.title ? metadata.title : 'ohMyCloudmusic';
+        artist.textContent = metadata && metadata.artist ? metadata.artist : '等待播放';
+        var playing = !!(state && state.playing);
+        playPause.classList.toggle('playing', playing);
+        playPause.title = playing ? '暂停' : '播放';
+        playPause.setAttribute('aria-label', playPause.title);
+      }
+
+      function refresh() {
+        invoke('get_tray_state').then(render).catch(function () {});
+      }
+
+      document.querySelectorAll('[data-action]').forEach(function (button) {
+        button.addEventListener('click', function () {
+          invoke('tray_action', { action: button.dataset.action }).catch(function () {});
+        });
+      });
+
+      document.addEventListener('contextmenu', function (event) { event.preventDefault(); });
+      document.addEventListener('keydown', function (event) {
+        if (event.key === 'Escape') appWindow.hide();
+      });
+      window.addEventListener('focus', refresh);
+      listen('tray-state', function (event) { render(event.payload); });
+      refresh();
+    })();
+  </script>
+</body>
+</html>

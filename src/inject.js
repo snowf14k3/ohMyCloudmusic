@@ -276,6 +276,17 @@
     var lastMetadata = null;
     var lastPlaying = false;
 
+    function finishTransition(errorMessage, error) {
+      if (error) console.error(errorMessage, error);
+      return appWin.show().then(function () {
+        return appWin.setFocus();
+      }).catch(function (showError) {
+        console.error('[omc] failed to reveal window after Mini transition', showError);
+      }).then(function () {
+        transitioning = false;
+      });
+    }
+
     function mount() {
       if (!document.documentElement || document.getElementById('omc-mini-player')) return;
       var player = document.createElement('section');
@@ -316,26 +327,30 @@
           y: Math.round(state[2].y / state[0]),
           maximized: state[3]
         };
-        var ready = state[3] ? appWin.unmaximize() : Promise.resolve();
-        return ready
+        return appWin.hide()
+          .then(function () { return state[3] ? appWin.unmaximize() : Promise.resolve(); })
           .then(function () { return appWin.setMinSize(new T.window.LogicalSize(320, 320)); })
           .then(function () { return appWin.setSize(new T.window.LogicalSize(320, 320)); })
           .then(function () { return appWin.setAlwaysOnTop(true); });
       }).then(function () {
         mode = 'expanded';
         document.documentElement.classList.add('omc-mini-active');
-      }).catch(function (error) {
-        console.error('[omc] failed to enter Mini mode', error);
-      }).then(function () { transitioning = false; });
+        return finishTransition();
+      }, function (error) {
+        return finishTransition('[omc] failed to enter Mini mode', error);
+      });
     }
 
     function exit() {
       if (mode === 'normal' || transitioning) return;
       transitioning = true;
       var state = restoreState;
-      document.documentElement.classList.remove('omc-mini-active');
-      mode = 'normal';
-      appWin.setAlwaysOnTop(false)
+      appWin.hide()
+        .then(function () {
+          document.documentElement.classList.remove('omc-mini-active');
+          mode = 'normal';
+          return appWin.setAlwaysOnTop(false);
+        })
         .then(function () { return appWin.setMinSize(new T.window.LogicalSize(800, 600)); })
         .then(function () {
           if (!state) return;
@@ -343,9 +358,11 @@
           return appWin.setSize(new T.window.LogicalSize(state.width, state.height)).then(function () {
             return appWin.setPosition(new T.window.LogicalPosition(state.x, state.y));
           });
-        }).catch(function (error) {
-          console.error('[omc] failed to exit Mini mode', error);
-        }).then(function () { transitioning = false; });
+        }).then(function () {
+          return finishTransition();
+        }, function (error) {
+          return finishTransition('[omc] failed to exit Mini mode', error);
+        });
     }
 
     function updateMetadata(metadata) {
@@ -389,7 +406,8 @@
         play: '#btn_pc_minibar_play',
         pause: '#btn_pc_minibar_play',
         nexttrack: '[aria-label="next"]',
-        previoustrack: '[aria-label="pre"]'
+        previoustrack: '[aria-label="pre"]',
+        like: '#btn_pc_minibar_like,[id*="minibar_like"],[class*="songPlayInfo"] [aria-label="like"],[class*="songPlayInfo"] [aria-label="unlike"],[class*="songPlayInfo"] [aria-label="favorite"],[class*="songPlayInfo"] [aria-label="unfavorite"],[class*="songPlayInfo"] [aria-label="喜欢"],[class*="songPlayInfo"] [aria-label="取消喜欢"],[class*="songPlayInfo"] [title="喜欢"],[class*="songPlayInfo"] [title="取消喜欢"]'
       };
       var button = document.querySelector(selectors[action]);
       var audio = document.querySelector('audio');

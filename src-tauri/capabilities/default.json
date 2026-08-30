@@ -1,7 +1,7 @@
 {
   "identifier": "default",
   "description": "Capabilities for all windows",
-  "windows": ["main", "login"],
+  "windows": ["main", "login", "tray-menu"],
   "permissions": [
     "core:default",
     "core:window:default",
