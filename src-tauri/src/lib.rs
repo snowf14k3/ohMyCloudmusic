@@ -14,7 +14,8 @@ use windows::Win32::{
     Foundation::{POINT, RECT},
     Graphics::Gdi::{ClientToScreen, CreateRoundRectRgn, SetWindowRgn},
     UI::WindowsAndMessaging::{
-        GetClientRect, GetWindowRect, SetWindowPos, SWP_NOACTIVATE, SWP_NOZORDER,
+        GetClientRect, GetForegroundWindow, GetWindowRect, SetForegroundWindow, SetWindowPos,
+        SWP_NOACTIVATE, SWP_NOZORDER,
     },
 };
 
@@ -31,6 +32,12 @@ const INJECT_JS: &str = concat!(
     "\n;\n",
     include_str!("../../src/inject/bootstrap.js"),
 );
+
+static SONG_MENU_ACTION: std::sync::Mutex<Option<String>> = std::sync::Mutex::new(None);
+static SONG_MENU_SESSION: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
+static VOLUME_POPUP_VALUE: std::sync::Mutex<Option<f64>> = std::sync::Mutex::new(None);
+static VOLUME_POPUP_OPEN: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+static VOLUME_POPUP_SESSION: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
 
 fn is_netease_login_url(url: &tauri::Url) -> bool {
     if url.host_str() != Some("music.163.com") {
@@ -237,6 +244,206 @@ fn finish_window_region_animation(
     Ok(())
 }
 
+#[cfg(windows)]
+#[tauri::command]
+fn open_song_menu(
+    app: tauri::AppHandle,
+    window: tauri::WebviewWindow,
+    x: f64,
+    y: f64,
+    artist: String,
+    album: String,
+    source: String,
+) -> Result<(), String> {
+    let scale = window.scale_factor().map_err(|error| error.to_string())?;
+    let origin = window.inner_position().map_err(|error| error.to_string())?;
+    let menu = app
+        .get_webview_window("song-menu")
+        .ok_or("song menu window is unavailable")?;
+    let session = SONG_MENU_SESSION.fetch_add(1, std::sync::atomic::Ordering::AcqRel) + 1;
+    *SONG_MENU_ACTION
+        .lock()
+        .map_err(|_| "failed to lock song menu action")? = None;
+    menu.set_position(tauri::LogicalPosition::new(
+        origin.x as f64 / scale + x,
+        origin.y as f64 / scale + y,
+    ))
+    .map_err(|error| error.to_string())?;
+    let payload = serde_json::json!({ "artist": artist, "album": album, "source": source });
+    menu.eval(format!("window.renderSongMenu({payload})"))
+        .map_err(|error| error.to_string())?;
+    menu.show().map_err(|error| error.to_string())?;
+    let menu_hwnd = menu.hwnd().map_err(|error| error.to_string())?;
+    unsafe {
+        let _ = SetForegroundWindow(menu_hwnd);
+    }
+    menu.set_focus().map_err(|error| error.to_string())?;
+
+    let watched_menu = menu.clone();
+    let menu_hwnd_value = menu_hwnd.0 as isize;
+    std::thread::spawn(move || {
+        std::thread::sleep(std::time::Duration::from_millis(100));
+        loop {
+            if SONG_MENU_SESSION.load(std::sync::atomic::Ordering::Acquire) != session {
+                return;
+            }
+            let foreground = unsafe { GetForegroundWindow() };
+            if foreground.0 as isize != menu_hwnd_value {
+                if SONG_MENU_SESSION
+                    .compare_exchange(
+                        session,
+                        session + 1,
+                        std::sync::atomic::Ordering::AcqRel,
+                        std::sync::atomic::Ordering::Acquire,
+                    )
+                    .is_ok()
+                {
+                    if let Ok(mut action) = SONG_MENU_ACTION.lock() {
+                        if action.is_none() {
+                            *action = Some(String::new());
+                        }
+                    }
+                    let _ = watched_menu.hide();
+                }
+                return;
+            }
+            std::thread::sleep(std::time::Duration::from_millis(50));
+        }
+    });
+    Ok(())
+}
+
+#[tauri::command]
+fn select_song_menu_action(app: tauri::AppHandle, action: String) -> Result<(), String> {
+    SONG_MENU_SESSION.fetch_add(1, std::sync::atomic::Ordering::AcqRel);
+    *SONG_MENU_ACTION
+        .lock()
+        .map_err(|_| "failed to lock song menu action")? = Some(action);
+    if let Some(menu) = app.get_webview_window("song-menu") {
+        menu.hide().map_err(|error| error.to_string())?;
+    }
+    if let Some(main) = app.get_webview_window("main") {
+        let _ = main.set_focus();
+    }
+    Ok(())
+}
+
+#[tauri::command]
+fn close_song_menu(app: tauri::AppHandle) -> Result<(), String> {
+    SONG_MENU_SESSION.fetch_add(1, std::sync::atomic::Ordering::AcqRel);
+    if let Ok(mut action) = SONG_MENU_ACTION.lock() {
+        if action.is_none() {
+            *action = Some(String::new());
+        }
+    }
+    if let Some(menu) = app.get_webview_window("song-menu") {
+        menu.hide().map_err(|error| error.to_string())?;
+    }
+    Ok(())
+}
+
+#[tauri::command]
+fn take_song_menu_action() -> Result<Option<String>, String> {
+    Ok(SONG_MENU_ACTION
+        .lock()
+        .map_err(|_| "failed to lock song menu action")?
+        .take())
+}
+
+#[tauri::command]
+fn open_volume_popup(
+    app: tauri::AppHandle,
+    window: tauri::WebviewWindow,
+    x: f64,
+    y: f64,
+    value: f64,
+) -> Result<(), String> {
+    let scale = window.scale_factor().map_err(|error| error.to_string())?;
+    let origin = window.inner_position().map_err(|error| error.to_string())?;
+    let popup = app
+        .get_webview_window("volume-popup")
+        .ok_or("volume popup window is unavailable")?;
+    let session = VOLUME_POPUP_SESSION.fetch_add(1, std::sync::atomic::Ordering::AcqRel) + 1;
+    *VOLUME_POPUP_VALUE
+        .lock()
+        .map_err(|_| "failed to lock volume popup value")? = None;
+    VOLUME_POPUP_OPEN.store(true, std::sync::atomic::Ordering::Release);
+    popup
+        .set_position(tauri::LogicalPosition::new(
+            origin.x as f64 / scale + x,
+            origin.y as f64 / scale + y,
+        ))
+        .map_err(|error| error.to_string())?;
+    popup
+        .eval(format!("window.renderVolume({})", value.clamp(0.0, 1.0)))
+        .map_err(|error| error.to_string())?;
+    popup.show().map_err(|error| error.to_string())?;
+    let popup_hwnd = popup.hwnd().map_err(|error| error.to_string())?;
+    unsafe {
+        let _ = SetForegroundWindow(popup_hwnd);
+    }
+    popup.set_focus().map_err(|error| error.to_string())?;
+
+    let watched_popup = popup.clone();
+    let popup_hwnd_value = popup_hwnd.0 as isize;
+    std::thread::spawn(move || {
+        std::thread::sleep(std::time::Duration::from_millis(100));
+        loop {
+            if VOLUME_POPUP_SESSION.load(std::sync::atomic::Ordering::Acquire) != session {
+                return;
+            }
+            let foreground = unsafe { GetForegroundWindow() };
+            if foreground.0 as isize != popup_hwnd_value {
+                if VOLUME_POPUP_SESSION
+                    .compare_exchange(
+                        session,
+                        session + 1,
+                        std::sync::atomic::Ordering::AcqRel,
+                        std::sync::atomic::Ordering::Acquire,
+                    )
+                    .is_ok()
+                {
+                    VOLUME_POPUP_OPEN.store(false, std::sync::atomic::Ordering::Release);
+                    let _ = watched_popup.hide();
+                }
+                return;
+            }
+            std::thread::sleep(std::time::Duration::from_millis(50));
+        }
+    });
+    Ok(())
+}
+
+#[tauri::command]
+fn set_volume_popup_value(value: f64) -> Result<(), String> {
+    *VOLUME_POPUP_VALUE
+        .lock()
+        .map_err(|_| "failed to lock volume popup value")? = Some(value.clamp(0.0, 1.0));
+    Ok(())
+}
+
+#[tauri::command]
+fn take_volume_popup_state() -> Result<serde_json::Value, String> {
+    let value = VOLUME_POPUP_VALUE
+        .lock()
+        .map_err(|_| "failed to lock volume popup value")?
+        .take();
+    Ok(serde_json::json!({
+        "open": VOLUME_POPUP_OPEN.load(std::sync::atomic::Ordering::Acquire),
+        "value": value,
+    }))
+}
+
+#[tauri::command]
+fn close_volume_popup(app: tauri::AppHandle) -> Result<(), String> {
+    VOLUME_POPUP_SESSION.fetch_add(1, std::sync::atomic::Ordering::AcqRel);
+    VOLUME_POPUP_OPEN.store(false, std::sync::atomic::Ordering::Release);
+    if let Some(popup) = app.get_webview_window("volume-popup") {
+        popup.hide().map_err(|error| error.to_string())?;
+    }
+    Ok(())
+}
+
 #[tauri::command]
 async fn qr_generate() -> Result<serde_json::Value, String> {
     let info = netease::generate_unikey().await?;
@@ -290,6 +497,14 @@ pub fn run() {
             on_login_success,
             animate_window_size_anchored_bottom,
             finish_window_region_animation,
+            open_song_menu,
+            select_song_menu_action,
+            close_song_menu,
+            take_song_menu_action,
+            open_volume_popup,
+            set_volume_popup_value,
+            take_volume_popup_state,
+            close_volume_popup,
             qr_generate,
             qr_check,
             tray::get_tray_state,
@@ -329,6 +544,56 @@ pub fn run() {
                 true
             })
             .build()?;
+
+            let song_menu = WebviewWindowBuilder::new(
+                app,
+                "song-menu",
+                tauri::WebviewUrl::App("song-menu.html".into()),
+            )
+            .title("Song menu")
+            .inner_size(172.0, 318.0)
+            .decorations(false)
+            .transparent(true)
+            .shadow(false)
+            .resizable(false)
+            .always_on_top(true)
+            .skip_taskbar(true)
+            .visible(false)
+            .build()?;
+            let song_menu_window = song_menu.clone();
+            song_menu.on_window_event(move |event| {
+                if let tauri::WindowEvent::Focused(false) = event {
+                    if let Ok(mut action) = SONG_MENU_ACTION.lock() {
+                        if action.is_none() {
+                            *action = Some(String::new());
+                        }
+                    }
+                    let _ = song_menu_window.hide();
+                }
+            });
+
+            let volume_popup = WebviewWindowBuilder::new(
+                app,
+                "volume-popup",
+                tauri::WebviewUrl::App("volume-popup.html".into()),
+            )
+            .title("Volume")
+            .inner_size(132.0, 50.0)
+            .decorations(false)
+            .transparent(true)
+            .shadow(false)
+            .resizable(false)
+            .always_on_top(true)
+            .skip_taskbar(true)
+            .visible(false)
+            .build()?;
+            let volume_popup_window = volume_popup.clone();
+            volume_popup.on_window_event(move |event| {
+                if let tauri::WindowEvent::Focused(false) = event {
+                    VOLUME_POPUP_OPEN.store(false, std::sync::atomic::Ordering::Release);
+                    let _ = volume_popup_window.hide();
+                }
+            });
 
             let startup_app = app.handle().clone();
             std::thread::spawn(move || {
