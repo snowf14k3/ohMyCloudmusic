@@ -11,6 +11,8 @@
   var readPlayingQueue = adapter.readPlayingQueue;
   var playQueueItem = adapter.playQueueItem;
   var removeQueueItem = adapter.removeQueueItem;
+  var performTrackAction = adapter.performTrackAction;
+  var openTrackComments = adapter.openTrackComments;
   var subscribeToInternalProgress = adapter.subscribeInternalProgress;
   function setupMiniPlayer(T, appWin) {
     var MINI_STATE_KEY = 'omc-mini-state';
@@ -380,15 +382,16 @@
       };
     }
 
-    function showSongMenu(event) {
+    function showSongMenu(event, targetSong) {
       event.preventDefault();
       event.stopPropagation();
       hideContextMenu();
-      var song = getCurrentSong();
+      var song = targetSong || getCurrentSong();
       var buttonRect = event.currentTarget.getBoundingClientRect();
+      var fromPointer = event.type === 'contextmenu';
       T.core.invoke('open_song_menu', {
-        x: buttonRect.right - 10,
-        y: buttonRect.top,
+        x: fromPointer ? event.clientX + 4 : buttonRect.right - 10,
+        y: fromPointer ? event.clientY : buttonRect.top,
         artist: song.artist || '未知',
         album: song.album || '未知',
         source: song.source || '未知'
@@ -399,7 +402,7 @@
           T.core.invoke('take_song_menu_action').then(function (action) {
             if (action === null && attempts < 600) return;
             clearInterval(timer);
-            if (action) handleSongMenuAction(action);
+            if (action) handleSongMenuAction(action, song);
           }).catch(function () { clearInterval(timer); });
         }, 50);
       }).catch(function (error) {
@@ -407,22 +410,36 @@
       });
     }
 
-    function handleSongMenuAction(action) {
-      var song = getCurrentSong();
+    function handleSongMenuAction(action, song) {
+      song = song || getCurrentSong();
       var songUrl = song.id ? 'https://music.163.com/song?id=' + encodeURIComponent(song.id) : '';
       if (action === 'play') {
-        performMediaAction('play');
+        if (song.id) playQueueItem(window, song.id);
+        else performMediaAction('play');
       } else if (action === 'like') {
-        clickFullPlayerControl('[aria-label="collect"][title="收藏到歌单"],[aria-label="collect"]');
+        exit().then(function () {
+          if (!performTrackAction(window, song.id, 'favorite')) {
+            console.error('[omc] failed to collect selected track');
+          }
+        });
       } else if (action === 'comments') {
-        clickFullPlayerControl('[aria-label="comment_number"][title="查看评论"],[aria-label="comment_number"]');
+        exit().then(function () {
+          if (!openTrackComments(window, song.id)) {
+            console.error('[omc] failed to open selected track comments');
+          }
+        });
       } else if (action === 'download' && song.id) {
-        var link = document.createElement('a');
-        link.href = 'https://music.163.com/song/media/outer/url?id=' + encodeURIComponent(song.id) + '.mp3';
-        link.download = song.title || 'music';
-        link.click();
+        exit().then(function () {
+          if (!performTrackAction(window, song.id, 'download')) {
+            console.error('[omc] failed to download selected track');
+          }
+        });
       } else if (action === 'share' && songUrl) {
-        clickFullPlayerControl('[aria-label="share"],button[title="分享"]');
+        exit().then(function () {
+          if (!performTrackAction(window, song.id, 'share')) {
+            console.error('[omc] failed to share selected track');
+          }
+        });
       } else if (action === 'copy' && songUrl) {
         navigator.clipboard.writeText(songUrl).catch(function () {});
       } else if (action === 'artist' && song.artistId) {
@@ -434,44 +451,10 @@
           setTimeout(function () { renderQueue(true); }, 100);
         }
       } else if (action === 'dislike') {
-        performMediaAction('dislike');
+        if (!performTrackAction(window, song.id, 'dislike')) {
+          console.error('[omc] failed to reduce recommendations for selected track');
+        }
       }
-    }
-
-    function clickFullPlayerControl(selector) {
-      exit().then(function () {
-        var attempts = 0;
-        var timer = setInterval(function () {
-          attempts += 1;
-          var scopes = [document];
-          var frame = document.querySelector('#g_iframe,iframe[name="contentFrame"]');
-          try {
-            if (frame && frame.contentDocument) scopes.push(frame.contentDocument);
-          } catch (error) {}
-          var commentButton = null;
-          for (var i = 0; i < scopes.length; i++) {
-            var controls = scopes[i].querySelectorAll(selector);
-            for (var controlIndex = controls.length - 1; controlIndex >= 0; controlIndex--) {
-              var candidate = controls[controlIndex].closest('button') || controls[controlIndex];
-              if (candidate.getAttribute('aria-disabled') !== 'true' && candidate.getClientRects().length) {
-                commentButton = candidate;
-                break;
-              }
-            }
-            if (commentButton) break;
-          }
-          if (commentButton) {
-            clearInterval(timer);
-            commentButton.scrollIntoView({ block: 'nearest' });
-            commentButton.focus();
-            commentButton.click();
-          } else if (attempts >= 50) {
-            clearInterval(timer);
-          }
-        }, 100);
-      }).catch(function (error) {
-        console.error('[omc] failed to activate full player control', error);
-      });
     }
 
     function openFullPlayerResource(type, id, name) {
@@ -819,11 +802,26 @@
         row.classList.toggle('odd', index % 2 === 0);
         row.classList.toggle('active', item.id === queueSnapshot.currentId);
         row.style.top = (index * QUEUE_ROW_HEIGHT) + 'px';
-        row.innerHTML = '<span class="omc-mini-queue-title"></span>';
+        row.innerHTML = '<span class="omc-mini-queue-title"></span><button class="omc-mini-queue-more" type="button" aria-label="歌曲菜单" title="歌曲菜单">•••</button>';
         row.querySelector('.omc-mini-queue-title').textContent = item.title;
         row.setAttribute('data-track-id', item.id);
-        row.addEventListener('click', function (event) {
+        row.addEventListener('dblclick', function (event) {
+          if (event.target.closest('button')) return;
           playQueueItem(window, event.currentTarget.getAttribute('data-track-id'));
+        });
+        row.addEventListener('contextmenu', function (event) {
+          var trackId = event.currentTarget.getAttribute('data-track-id');
+          var song = queueSnapshot.items.find(function (entry) { return entry.id === trackId; });
+          if (song) showSongMenu(event, song);
+        });
+        row.querySelector('.omc-mini-queue-more').addEventListener('pointerdown', function (event) {
+          event.stopPropagation();
+        });
+        row.querySelector('.omc-mini-queue-more').addEventListener('click', function (event) {
+          var row = event.currentTarget.closest('.omc-mini-queue-row');
+          var trackId = row && row.getAttribute('data-track-id');
+          var song = queueSnapshot.items.find(function (entry) { return entry.id === trackId; });
+          if (song) showSongMenu(event, song);
         });
         fragment.appendChild(row);
       }

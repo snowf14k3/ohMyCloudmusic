@@ -92,11 +92,14 @@
     '#omc-mini-queue-content{position:relative;width:100%;min-height:100%}' +
     '#omc-mini-queue-scrollbar{position:absolute;top:3px;right:2px;bottom:3px;width:5px}' +
     '#omc-mini-queue-scroll-thumb{position:absolute;top:0;right:0;width:4px;min-height:22px;border-radius:4px;background:#b7b7b7;opacity:.82;cursor:default}' +
-    '.omc-mini-queue-row{position:absolute;left:0;right:0;height:34px;padding:0 22px;box-sizing:border-box;display:flex;align-items:center;gap:8px;cursor:default;font-size:12px;background:#fafafa}' +
+    '.omc-mini-queue-row{position:absolute;left:0;right:0;height:34px;padding:0 38px 0 22px;box-sizing:border-box;display:flex;align-items:center;gap:8px;cursor:default;font-size:12px;background:#fafafa}' +
     '.omc-mini-queue-row.odd{background:#f4f4f4}' +
     '.omc-mini-queue-row:hover{background:#ececec}' +
     '.omc-mini-queue-row.active{color:#df3b3b}' +
-    '.omc-mini-queue-title{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}' +
+    '.omc-mini-queue-title{min-width:0;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}' +
+    '.omc-mini-queue-more{position:absolute;right:8px;top:50%;width:24px;height:24px;padding:0;border:0;border-radius:4px;background:transparent;color:#85878c;font-size:10px;line-height:1;letter-spacing:1px;opacity:0;transform:translateY(-50%);cursor:default}' +
+    '.omc-mini-queue-row:hover .omc-mini-queue-more,.omc-mini-queue-more:focus-visible{opacity:1}' +
+    '.omc-mini-queue-more:hover{background:#dedede;color:#4c4e53}' +
     '#omc-mini-context{position:fixed;z-index:12;display:none;width:112px;padding:4px;border:1px solid rgba(0,0,0,.12);border-radius:5px;background:rgba(250,250,249,.98);box-shadow:0 5px 18px rgba(0,0,0,.22);color:#303238;font-size:12px;backdrop-filter:blur(16px);-webkit-app-region:no-drag}' +
     '#omc-mini-context.open{display:block}' +
     '.omc-mini-context-item{appearance:none;width:100%;height:28px;padding:0 8px;display:flex;align-items:center;gap:7px;border:0;border-radius:3px;background:transparent;color:inherit;text-align:left;font:inherit;cursor:default}' +
