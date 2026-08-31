@@ -37,35 +37,15 @@ const INJECT_JS: &str = concat!(
 
 fn font_protocol_response(path: &str) -> tauri::http::Response<&'static [u8]> {
     let (status, content_type, body): (_, _, &'static [u8]) = match path {
-        "/SF-Pro-Text-Regular.otf" => (
-            tauri::http::StatusCode::OK,
-            "font/otf",
-            include_bytes!("../../src/fonts/SF-Pro-Text-Regular.otf"),
-        ),
-        "/SF-Pro-Text-Medium.otf" => (
-            tauri::http::StatusCode::OK,
-            "font/otf",
-            include_bytes!("../../src/fonts/SF-Pro-Text-Medium.otf"),
-        ),
-        "/SF-Pro-Text-Semibold.otf" => (
-            tauri::http::StatusCode::OK,
-            "font/otf",
-            include_bytes!("../../src/fonts/SF-Pro-Text-Semibold.otf"),
-        ),
-        "/SF-Pro-Text-Bold.otf" => (
-            tauri::http::StatusCode::OK,
-            "font/otf",
-            include_bytes!("../../src/fonts/SF-Pro-Text-Bold.otf"),
-        ),
-        "/PingFangSC-Medium.woff2" => (
+        "/PingFangSC-Medium-Full.woff2" => (
             tauri::http::StatusCode::OK,
             "font/woff2",
-            include_bytes!("../../src/fonts/PingFangSC-Medium.woff2"),
+            include_bytes!("../../src/fonts/PingFangSC-Medium-Full.woff2"),
         ),
-        "/PingFangSC-Semibold.woff2" => (
+        "/PingFangSC-Semibold-Full.woff2" => (
             tauri::http::StatusCode::OK,
             "font/woff2",
-            include_bytes!("../../src/fonts/PingFangSC-Semibold.woff2"),
+            include_bytes!("../../src/fonts/PingFangSC-Semibold-Full.woff2"),
         ),
         _ => (tauri::http::StatusCode::NOT_FOUND, "text/plain", b""),
     };
@@ -573,6 +553,10 @@ pub fn run() {
             .resizable(true)
             .visible(false)
             .user_agent(USER_AGENT)
+            .additional_browser_args(
+                "--disable-features=msWebOOUI,msPdfOOUI,msSmartScreenProtection \
+                 --autoplay-policy=no-user-gesture-required --disable-lcd-text",
+            )
             .initialization_script(INJECT_JS)
             .on_navigation(move |url| {
                 println!("[omc:navigation] {url}");
