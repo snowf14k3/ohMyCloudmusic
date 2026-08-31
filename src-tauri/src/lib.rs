@@ -22,6 +22,8 @@ use windows::Win32::{
 pub const USER_AGENT: &str = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36";
 
 const INJECT_JS: &str = concat!(
+    include_str!("../../src/inject/font-override.js"),
+    "\n;\n",
     include_str!("../../src/inject/styles.js"),
     "\n;\n",
     include_str!("../../src/inject/netease-adapter.js"),
@@ -32,6 +34,50 @@ const INJECT_JS: &str = concat!(
     "\n;\n",
     include_str!("../../src/inject/bootstrap.js"),
 );
+
+fn font_protocol_response(path: &str) -> tauri::http::Response<&'static [u8]> {
+    let (status, content_type, body): (_, _, &'static [u8]) = match path {
+        "/SF-Pro-Text-Regular.otf" => (
+            tauri::http::StatusCode::OK,
+            "font/otf",
+            include_bytes!("../../src/fonts/SF-Pro-Text-Regular.otf"),
+        ),
+        "/SF-Pro-Text-Medium.otf" => (
+            tauri::http::StatusCode::OK,
+            "font/otf",
+            include_bytes!("../../src/fonts/SF-Pro-Text-Medium.otf"),
+        ),
+        "/SF-Pro-Text-Semibold.otf" => (
+            tauri::http::StatusCode::OK,
+            "font/otf",
+            include_bytes!("../../src/fonts/SF-Pro-Text-Semibold.otf"),
+        ),
+        "/SF-Pro-Text-Bold.otf" => (
+            tauri::http::StatusCode::OK,
+            "font/otf",
+            include_bytes!("../../src/fonts/SF-Pro-Text-Bold.otf"),
+        ),
+        "/PingFangSC-Medium.woff2" => (
+            tauri::http::StatusCode::OK,
+            "font/woff2",
+            include_bytes!("../../src/fonts/PingFangSC-Medium.woff2"),
+        ),
+        "/PingFangSC-Semibold.woff2" => (
+            tauri::http::StatusCode::OK,
+            "font/woff2",
+            include_bytes!("../../src/fonts/PingFangSC-Semibold.woff2"),
+        ),
+        _ => (tauri::http::StatusCode::NOT_FOUND, "text/plain", b""),
+    };
+
+    tauri::http::Response::builder()
+        .status(status)
+        .header(tauri::http::header::CONTENT_TYPE, content_type)
+        .header(tauri::http::header::ACCESS_CONTROL_ALLOW_ORIGIN, "*")
+        .header("Cross-Origin-Resource-Policy", "cross-origin")
+        .body(body)
+        .unwrap()
+}
 
 static SONG_MENU_ACTION: std::sync::Mutex<Option<String>> = std::sync::Mutex::new(None);
 static SONG_MENU_SESSION: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
@@ -476,6 +522,9 @@ async fn qr_check(app: tauri::AppHandle, unikey: String) -> Result<netease::QrSt
 
 pub fn run() {
     tauri::Builder::default()
+        .register_uri_scheme_protocol("omc-font", |_context, request| {
+            font_protocol_response(request.uri().path())
+        })
         .manage(MediaStore::new())
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {

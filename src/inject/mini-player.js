@@ -213,7 +213,7 @@
         '<div id="omc-mini-art"><img id="omc-mini-cover" alt="专辑封面" draggable="false"></div>' +
         '<div id="omc-mini-lyrics"><div id="omc-mini-lyric-list"><div class="omc-mini-lyric-line">暂无歌词</div></div></div>' +
         '<header class="omc-mini-toolbar" id="omc-mini-top" data-tauri-drag-region>' +
-          '<div id="omc-mini-window-actions"><button class="omc-mini-button" id="omc-mini-hide" title="隐藏" aria-label="隐藏"><svg viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="currentColor" stroke-width="1"><path d="M3.5 3.5l9 9m0-9l-9 9"/></svg></button><button class="omc-mini-button" id="omc-mini-exit" title="恢复主窗口" aria-label="恢复主窗口"><svg viewBox="0 0 16 16" width="11" height="11" fill="none" stroke="currentColor" stroke-width="1"><rect x="3.5" y="3.5" width="9" height="9"/></svg></button></div>' +
+          '<div id="omc-mini-window-actions"><button class="omc-mini-button" id="omc-mini-hide" title="隐藏" aria-label="隐藏"><svg viewBox="0 0 16 16" width="8" height="8" fill="none" stroke="currentColor" stroke-width="1"><path d="M3.5 3.5l9 9m0-9l-9 9"/></svg></button><button class="omc-mini-button" id="omc-mini-exit" title="恢复主窗口" aria-label="恢复主窗口"><svg viewBox="0 0 16 16" width="7" height="7" fill="none" stroke="currentColor" stroke-width="1"><rect x="3.5" y="3.5" width="9" height="9"/></svg></button></div>' +
           '<div id="omc-mini-heading" data-tauri-drag-region><div id="omc-mini-title">网易云音乐</div><div id="omc-mini-artist">等待播放</div></div>' +
           '<button class="omc-mini-button" id="omc-mini-more" title="歌曲菜单" aria-label="歌曲菜单">•••</button>' +
         '</header>' +

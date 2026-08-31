@@ -23,13 +23,14 @@
     '#omc-btn-max[data-maximized="true"] .omc-maximize-icon{display:none}' +
     '#omc-btn-max[data-maximized="true"] .omc-restore-icon{display:block}' +
     'html.omc-mini-active,html.omc-mini-active body,#omc-mini-player{background:#171719}' +
-    '#omc-mini-player{position:fixed;inset:0;z-index:2147483647;display:none;overflow:hidden;isolation:isolate;color:#f5f5f5;font-family:"Microsoft YaHei UI","Segoe UI",sans-serif}' +
+    '#omc-mini-player{position:fixed;inset:0;z-index:2147483647;display:none;overflow:hidden;isolation:isolate;color:#f5f5f5}' +
     '.omc-mini-active #omc-mini-player{display:block}' +
     '.omc-mini-active #omc-window-controls{display:none}' +
     '#omc-mini-art{position:absolute;inset:0;z-index:1;overflow:hidden;background:linear-gradient(145deg,#29292d,#111);-webkit-app-region:no-drag}' +
     '#omc-mini-cover{width:100%;height:100%;display:block;object-fit:cover;user-select:none;-webkit-user-drag:none;-webkit-app-region:no-drag;transition:filter .32s ease,transform .32s ease,opacity .32s ease}' +
     '.omc-mini-lyrics #omc-mini-cover{filter:blur(18px) brightness(.42);transform:scale(1.16);opacity:.72}' +
-    '#omc-mini-lyrics{position:absolute;inset:48px 18px 58px;z-index:2;display:flex;align-items:flex-start;overflow:hidden;opacity:0;pointer-events:none;transition:opacity .25s ease}' +
+    '#omc-mini-lyrics{position:absolute;inset:24px 14px;z-index:2;display:flex;align-items:flex-start;overflow:hidden;opacity:0;pointer-events:none;transition:opacity .25s ease}' +
+    '.omc-mini-queue-open #omc-mini-lyrics{bottom:auto;height:calc(var(--omc-mini-cover-height, 100vw) - 48px)}' +
     '.omc-mini-lyrics #omc-mini-lyrics{opacity:1}' +
     '#omc-mini-lyric-list{width:100%;padding:110px 0;color:rgba(255,255,255,.48);text-align:center;font-size:13px;line-height:30px;transition:transform .34s cubic-bezier(.22,.72,.25,1)}' +
     '.omc-mini-lyric-line{min-height:30px;padding:4px 8px;white-space:normal;overflow-wrap:anywhere;word-break:break-word;line-height:22px;transition:color .2s ease,font-size .2s ease,font-weight .2s ease}' +
@@ -39,7 +40,7 @@
     '#omc-mini-top{top:0;height:50px;display:grid;grid-template-columns:42px 1fr 42px;align-items:center;transform:translateY(-100%);-webkit-app-region:drag}' +
     '#omc-mini-window-actions{display:flex;align-items:center;padding-left:6px;transition:opacity .1s ease;-webkit-app-region:no-drag}' +
     '#omc-mini-player:not(.omc-mini-compact) #omc-mini-window-actions{height:50px;padding:2px 0 2px 6px;flex-direction:column;align-items:flex-start;justify-content:center}' +
-    '#omc-mini-player:not(.omc-mini-compact) #omc-mini-window-actions .omc-mini-button{width:20px;height:20px}' +
+    '#omc-mini-player:not(.omc-mini-compact) #omc-mini-window-actions .omc-mini-button{width:16px;height:16px}' +
     '#omc-mini-heading{min-width:0;text-align:center;line-height:1.25}' +
     '#omc-mini-title{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px;font-weight:500;color:#303238}' +
     '#omc-mini-artist{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-top:2px;font-size:11px;color:#898b91}' +
@@ -69,7 +70,7 @@
     ':is(.omc-mini-compact,.omc-mini-compacting,.omc-mini-expanding) #omc-mini-top{left:0;right:auto;z-index:7;width:26px;height:50px;display:block;opacity:1;pointer-events:auto;background:transparent;backdrop-filter:none}' +
     '.omc-mini-compact #omc-mini-top{transform:none}' +
     ':is(.omc-mini-compact,.omc-mini-compacting,.omc-mini-expanding) #omc-mini-window-actions{height:50px;padding:2px 0 2px 6px;flex-direction:column;justify-content:center}' +
-    ':is(.omc-mini-compact,.omc-mini-compacting,.omc-mini-expanding) #omc-mini-window-actions .omc-mini-button{width:20px;height:20px}' +
+    ':is(.omc-mini-compact,.omc-mini-compacting,.omc-mini-expanding) #omc-mini-window-actions .omc-mini-button{width:16px;height:16px}' +
     ':is(.omc-mini-compact,.omc-mini-compacting,.omc-mini-expanding) #omc-mini-heading,:is(.omc-mini-compact,.omc-mini-compacting,.omc-mini-expanding) #omc-mini-more{display:none}' +
     ':is(.omc-mini-compact,.omc-mini-compacting,.omc-mini-expanding) #omc-mini-bottom{left:0;opacity:1;transform:none;transition:none;pointer-events:auto;-webkit-app-region:drag}' +
     ':is(.omc-mini-compacting,.omc-mini-expanding) #omc-mini-top{opacity:0;pointer-events:none;transition:none}' +
