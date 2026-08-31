@@ -448,6 +448,77 @@
     }
   }
 
+  function performTrackAction(targetWindow, trackId, action) {
+    try {
+      readInternalPlayerState(targetWindow);
+      var require = targetWindow.__OMC__ && targetWindow.__OMC__.webpackRequire;
+      var app = require && require(14).a;
+      var state = app && app.getStore && app.getStore();
+      var items = state && state.playingList && state.playingList.curPlayingList || [];
+      var wanted = String(trackId);
+      var item = items.find(function (entry) {
+        return String(entry.resourceId || entry.trackId || entry.track && entry.track.id || '') === wanted;
+      });
+      if (!item && state && state.playing && String(state.playing.onlineResourceId) === wanted) {
+        item = state.playing.curPlaying;
+      }
+      var track = item && (item.track || item.localTrack);
+      var dispatch = app && app.getDispatch && app.getDispatch();
+      if (!track || !dispatch || ['favorite', 'download', 'share', 'dislike'].indexOf(action) === -1) return false;
+
+      var fromInfo = item.fromInfo || {};
+      var data = {
+        resource: track,
+        resourceType: item.resourceType || 'track',
+        from: {
+          scene: item.scene || fromInfo.originalScene || 'playingList',
+          text: item.text || '',
+          href: item.href || '',
+          sourceData: fromInfo.sourceData || null
+        }
+      };
+      if (action === 'dislike') {
+        data.from.scene = 'dailyRecommend';
+        data.menuPayload = { type: 'song', id: track.id };
+      }
+      dispatch({
+        type: 'async:action/doAction',
+        payload: { actionId: action, data: data }
+      });
+      return true;
+    } catch (error) {
+      return false;
+    }
+  }
+
+  function openTrackComments(targetWindow, trackId) {
+    try {
+      readInternalPlayerState(targetWindow);
+      var require = targetWindow.__OMC__ && targetWindow.__OMC__.webpackRequire;
+      var app = require && require(14).a;
+      var state = app && app.getStore && app.getStore();
+      var items = state && state.playingList && state.playingList.curPlayingList || [];
+      var wanted = String(trackId);
+      var item = items.find(function (entry) {
+        return String(entry.resourceId || entry.trackId || entry.track && entry.track.id || '') === wanted;
+      });
+      if (!item && state && state.playing && String(state.playing.onlineResourceId) === wanted) {
+        item = state.playing.curPlaying;
+      }
+      var track = item && (item.track || item.localTrack);
+      var dispatch = app && app.getDispatch && app.getDispatch();
+      var routerRedux = require && require(16).routerRedux;
+      if (!track || !track.commentThreadId || !dispatch || !routerRedux) return false;
+      dispatch(routerRedux.push('/comment/' + track.commentThreadId, {
+        resource: track,
+        resourceType: 'track'
+      }));
+      return true;
+    } catch (error) {
+      return false;
+    }
+  }
+
   function subscribeInternalProgress(targetWindow, callback) {
     readInternalPlayerState(targetWindow);
     var require = targetWindow.__OMC__ && targetWindow.__OMC__.webpackRequire;
@@ -473,6 +544,8 @@
     readPlayingQueue: readPlayingQueue,
     playQueueItem: playQueueItem,
     removeQueueItem: removeQueueItem,
+    performTrackAction: performTrackAction,
+    openTrackComments: openTrackComments,
     subscribeInternalProgress: subscribeInternalProgress
   };
 })();
