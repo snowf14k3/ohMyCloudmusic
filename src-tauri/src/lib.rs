@@ -553,10 +553,6 @@ pub fn run() {
             .resizable(true)
             .visible(false)
             .user_agent(USER_AGENT)
-            .additional_browser_args(
-                "--disable-features=msWebOOUI,msPdfOOUI,msSmartScreenProtection \
-                 --autoplay-policy=no-user-gesture-required --disable-lcd-text",
-            )
             .initialization_script(INJECT_JS)
             .on_navigation(move |url| {
                 println!("[omc:navigation] {url}");
